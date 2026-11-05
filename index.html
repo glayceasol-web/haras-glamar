@@ -696,6 +696,7 @@ const MOD={
     {k:"entrada",l:"Entrada (R$)",t:"money"},
     {k:"nParcelas",l:"Nº de parcelas",t:"number",req:1,def:"1"},
     {k:"primeiraParcela",l:"Vencimento da 1ª parcela",t:"date",req:1},
+    {k:"valoresParcelas",l:"Parcelas com valores diferentes (opcional)",t:"text",ph:"Ex.: 1000; 2000",help:"Separe por ponto e vírgula, uma por mês. Em branco: divide o total em parcelas iguais."},
     {k:"dataCompra",l:"Data da compra",t:"date",def:today},
     {k:"obs",l:"Observações",t:"textarea",full:1}]},
   cascos:{titulo:"Ferrageamento e casqueamento",singular:"serviço de ferrageamento",fields:[
@@ -1196,7 +1197,9 @@ function fotoDe(nome,propria){if(propria)return propria;const a=animalDe(nome);r
 const thumbH=(src,alt)=>src?`<img class="thumb" src="${esc(mini(src))}" alt="${esc(alt)}" title="${esc(alt)}" loading="lazy">`:`<span class="thumb thumb-empty" title="${esc(alt)}"></span>`;
 /* ---------- compras parceladas ---------- */
 function addMeses(iso,n){const [y,m,d]=iso.split("-").map(Number);const t=new Date(y,m-1+n,1);const ult=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(Math.min(d,ult)).padStart(2,"0")}`}
-function parcelas(c){const n=Math.max(1,Math.round(parseNum(c.nParcelas)||1));const base=parseNum(c.valorTotal)-parseNum(c.entrada);const v=Math.round(base/n*100)/100;const pagas=new Set(c.pagas||[]);
+function parcelas(c){const vs=String(c.valoresParcelas||"").split(/[;|]/).map(x=>parseNum(x)).filter(x=>x>0);const pagasV=new Set(c.pagas||[]);
+  if(vs.length)return vs.map((v,i)=>({n:i+1,data:c.primeiraParcela?addMeses(c.primeiraParcela,i):"",valor:v,paga:pagasV.has(i+1)}));
+  const n=Math.max(1,Math.round(parseNum(c.nParcelas)||1));const base=parseNum(c.valorTotal)-parseNum(c.entrada);const v=Math.round(base/n*100)/100;const pagas=new Set(c.pagas||[]);
   return Array.from({length:n},(_,i)=>({n:i+1,data:c.primeiraParcela?addMeses(c.primeiraParcela,i):"",valor:i===n-1?Math.round((base-v*(n-1))*100)/100:v,paga:pagas.has(i+1)}))}
 function resumoCompra(c){const ps=parcelas(c);const pago=parseNum(c.entrada)+ps.filter(p=>p.paga).reduce((s,p)=>s+p.valor,0);const prox=ps.find(p=>!p.paga);
   const usadas=arr("reproducao").filter(r=>r.compraId===c.id).length;const q=parseNum(c.qtdCoberturas);
