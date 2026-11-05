@@ -321,10 +321,12 @@ function setSync(state,text){const n=$("#syncNote");n.innerHTML=`<span class="do
 /* ---------- site próprio: Supabase (login por e-mail e senha) ---------- */
 let SB=null,ME=null,PERFIS=[];
 async function initSupa(){
+  const H0=location.hash||"";const convite=H0.includes("type=invite"),recup=H0.includes("type=recovery");
   const C=window.HARAS_CONFIG;SB=window.supabase.createClient(C.supabaseUrl,C.supabaseKey);backend="supa";
   SB.auth.onAuthStateChange((ev,session)=>{if(ev==="PASSWORD_RECOVERY")showLogin("nova");else if(ev==="SIGNED_OUT")location.reload()});
   const {data}=await SB.auth.getSession();
-  if(location.hash.includes("type=recovery"))return;
+  if((convite||recup)&&data.session){showLogin(convite?"convite":"nova");return}
+  if(recup)return;
   if(!data.session){showLogin("entrar");return}
   await startSupa(data.session.user);
 }
@@ -351,9 +353,10 @@ async function loadSupa(){
 }
 function showLogin(modo){
   let el=$("#loginBox");if(!el){el=document.createElement("div");el.id="loginBox";document.body.appendChild(el)}
+  const conv=modo==="convite";if(conv)modo="nova";
   const nova=modo==="nova",esq=modo==="esqueci";
   el.innerHTML=`<div class="login"><div class="login-card"><img src="${esc(S.cfg.logo||LOGO_PADRAO)}" alt="Logo" class="login-logo"><h1>${esc(S.cfg.nome||"Haras GLAMAR")}</h1>
-   <p class="note">${nova?"Defina sua nova senha.":esq?"Enviaremos um link para você criar uma nova senha.":"Entre com o e-mail e a senha que você recebeu."}</p>
+   <p class="note">${conv?"Bem-vindo à equipe! Crie a sua senha para entrar.":nova?"Defina sua nova senha.":esq?"Enviaremos um link para você criar uma nova senha.":"Entre com o e-mail e a senha que você recebeu."}</p>
    <form id="loginForm" novalidate>
     ${nova?"":`<div class="field"><label for="lgEmail">E-mail</label><input id="lgEmail" type="email" autocomplete="username" required></div>`}
     ${esq?"":`<div class="field"><label for="lgPass">${nova?"Nova senha":"Senha"}</label><input id="lgPass" type="password" autocomplete="${nova?"new-password":"current-password"}" required></div>`}
