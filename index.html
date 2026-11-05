@@ -331,7 +331,7 @@ const DEFAULT_CFG={
 };
 function nomeCTE(){const n=(S.cfg&&S.cfg.nome)||"CTE GLAMAR";return /^haras glamar$/i.test(n.trim())?"CTE GLAMAR":n}
 const LIST_LABELS={entrada:"Categorias de entrada",saida:"Categorias de saída",naoRatear:"Saídas que NÃO entram no rateio do custo por animal",alimento:"Tipos de alimento",unidade:"Unidades de medida",estoqueCat:"Categorias de estoque",tarefa:"Tipos de tarefa",pagamento:"Formas de pagamento",categoriaAnimal:"Categorias de animal",tipoCocheira:"Tipos de cocheira / área",competicaoCat:"Categorias de competição"};
-const COLS=["animais","cocheiras","lancamentos","alimentacao","estoque","tarefas","competicoes","reproducao","compras","cascos"];
+const COLS=["animais","cocheiras","lancamentos","alimentacao","estoque","tarefas","competicoes","reproducao","compras","cascos","sanitario"];
 
 /* ---------- estado ---------- */
 const S={cfg:JSON.parse(JSON.stringify(DEFAULT_CFG))};COLS.forEach(c=>S[c]={});
@@ -341,7 +341,7 @@ const cfg=()=>S.cfg;
 /* perfis: admin (dona do sistema), financeiro (Editor no compartilhamento), usuario (Contribuidor), leitura (Leitor) */
 let ROLE="admin",USERNAME="";
 const ROLE_NOME={admin:"Administrador",financeiro:"Financeiro",usuario:"Treinador",leitura:"Somente leitura"};
-const ROLE_VIEWS={usuario:["painel","alimentacao","animais","cocheiras","estoque","tarefas","reproducao","inseminacao","cascos"],leitura:["painel","alimentacao","animais","cocheiras","estoque","tarefas","reproducao","inseminacao","cascos"],financeiro:null,admin:null};
+const ROLE_VIEWS={usuario:["painel","alimentacao","animais","cocheiras","estoque","tarefas","reproducao","inseminacao","cascos","sanitario"],leitura:["painel","alimentacao","animais","cocheiras","estoque","tarefas","reproducao","inseminacao","cascos","sanitario"],financeiro:null,admin:null};
 function can(x){if(x==="cfg")return ROLE==="admin";if(x==="fin")return ROLE==="admin"||ROLE==="financeiro";if(x==="edit")return ROLE!=="leitura";return false}
 function viewOk(v){if(v==="configuracoes")return ROLE==="admin";const l=ROLE_VIEWS[ROLE];return !l||l.includes(v)}
 const L=k=>(S.cfg.listas&&S.cfg.listas[k])||DEFAULT_CFG.listas[k]||[];
@@ -397,7 +397,7 @@ async function loadSupa(){
 }
 let PEND=null;
 function pendHTML(){if(!PEND||UI.view!=="painel")return"";const n=(PEND.animais||[]).length;const novos=(PEND.animais||[]).filter(a=>!S.animais[a.id]).length;
-  return `<div class="card" style="margin-bottom:16px;border:1px solid var(--accent)"><h3 style="margin:0 0 6px">${esc(PEND.titulo||"Cadastros prontos para entrar no sistema")}</h3><p style="margin:0 0 10px">${PEND.texto?esc(PEND.texto):`${n} animais com fotos e genealogia (${novos} novos), preparados a partir das fichas de registro.`} Confira e clique para incluir. Nada do que já está lançado é apagado.</p><p style="margin:0 0 10px;font-size:13.5px;color:var(--muted)">${[...(PEND.animais||[]).map(a=>a.nome||"Miniatura: "+((S.animais[a.id]||{}).nome||a.id)),...(PEND.atualizarPor||[]).map(m=>m.rotulo||"Atualizar reprodução"),...(PEND.reproducao||[]).map(r=>"Reprodução: "+(r.nomePotro||r.doadora)),...(PEND.estoque||[]).map(e=>"Estoque: "+e.item),...(PEND.cocheiras||[]).map(c=>"Estrutura: "+c.nome),...(PEND.mesclar||[]).map(m=>m.rotulo||"Juntar registros repetidos"),...(PEND.compras||[]).map(c=>"Compra: "+c.descricao),...(PEND.lancamentos||[]).map(l=>"Saída: "+(l.descricao||l.categoria))].map(esc).join(" · ")}</p>${PEND.erro?`<p style="margin:0 0 10px;color:var(--neg,#b42318)"><strong>Erro ao gravar:</strong> ${esc(PEND.erro)}</p>`:""}<button type="button" class="btn primary" id="pendImport">${PEND.erro?"Tentar de novo":"Incluir no sistema"}</button> <button type="button" class="btn" id="pendLater">Agora não</button></div>`}
+  return `<div class="card" style="margin-bottom:16px;border:1px solid var(--accent)"><h3 style="margin:0 0 6px">${esc(PEND.titulo||"Cadastros prontos para entrar no sistema")}</h3><p style="margin:0 0 10px">${PEND.texto?esc(PEND.texto):`${n} animais com fotos e genealogia (${novos} novos), preparados a partir das fichas de registro.`} Confira e clique para incluir. Nada do que já está lançado é apagado.</p><p style="margin:0 0 10px;font-size:13.5px;color:var(--muted)">${[...(PEND.animais||[]).map(a=>a.nome||"Miniatura: "+((S.animais[a.id]||{}).nome||a.id)),...(PEND.atualizarPor||[]).map(m=>m.rotulo||"Atualizar reprodução"),...(PEND.reproducao||[]).map(r=>"Reprodução: "+(r.nomePotro||r.doadora)),...(PEND.estoque||[]).map(e=>"Estoque: "+(e.item||(S.estoque[e.id]||{}).item||e.id)),...((PEND.tarefas||[]).length?[`${PEND.tarefas.length} tarefas`]:[]),...(PEND.cocheiras||[]).map(c=>"Estrutura: "+c.nome),...(PEND.mesclar||[]).map(m=>m.rotulo||"Juntar registros repetidos"),...(PEND.compras||[]).map(c=>"Compra: "+c.descricao),...(PEND.lancamentos||[]).map(l=>"Saída: "+(l.descricao||l.categoria))].map(esc).join(" · ")}</p>${PEND.erro?`<p style="margin:0 0 10px;color:var(--neg,#b42318)"><strong>Erro ao gravar:</strong> ${esc(PEND.erro)}</p>`:""}<button type="button" class="btn primary" id="pendImport">${PEND.erro?"Tentar de novo":"Incluir no sistema"}</button> <button type="button" class="btn" id="pendLater">Agora não</button></div>`}
 function showLogin(modo){
   let el=$("#loginBox");if(!el){el=document.createElement("div");el.id="loginBox";document.body.appendChild(el)}
   const conv=modo==="convite";if(conv)modo="nova";
@@ -457,6 +457,12 @@ function monthsInPeriod(){if(UI.modo==="mes")return 1;if(UI.modo==="ano"){const 
 
 /* ---------- cálculos ---------- */
 function alimTotal(a){return parseNum(a.quantidade)*parseNum(a.custoUnit)}
+/* dieta automática: itens do estoque com "quem consome" marcado geram custo diário por animal */
+function itensDieta(){return arr("estoque").filter(e=>Array.isArray(e.consomem)&&e.consomem.length&&parseNum(e.consumoAnimalDia)>0)}
+function diasDieta(e){const ini=e.inicioConsumo||today();let n=0;for(let d=ini,k=0;d<=today()&&k<4000;d=addDias(d,1),k++)if(inPeriod(d))n++;return n}
+function custoDieta(){const por={};let tot=0;itensDieta().forEach(e=>{const dias=diasDieta(e);if(!dias)return;const v=parseNum(e.consumoAnimalDia)*parseNum(e.custoUnit)*dias;
+  e.consomem.forEach(id=>{const a=S.animais[id];if(!a||(a.status||"Ativo")!=="Ativo")return;por[id]=(por[id]||0)+v;tot+=v})});return{por,tot}}
+const dietaIds=()=>new Set(itensDieta().map(e=>e.id));
 function animalNome(id){const a=S.animais[id];return a?a.nome:""}
 function cocheiraNome(id){const c=S.cocheiras[id];return c?c.nome:""}
 function estoqueNome(id){const e=S.estoque[id];return e?e.item:""}
@@ -464,7 +470,7 @@ function animaisAtivos(){return arr("animais").filter(a=>(a.status||"Ativo")==="
 function resumoFin(){
   let ent=0,sai=0,aRec=0,aPag=0;
   arr("lancamentos").filter(l=>inPeriod(l.data)).forEach(l=>{const v=parseNum(l.valor);if(l.tipo==="Entrada"){ent+=v;if(l.situacao==="Pendente")aRec+=v}else{sai+=v;if(l.situacao==="Pendente")aPag+=v}});
-  const alim=arr("alimentacao").filter(a=>inPeriod(a.data)).reduce((s,a)=>s+alimTotal(a),0);
+  const dI=dietaIds();const alim=arr("alimentacao").filter(a=>inPeriod(a.data)&&!dI.has(a.estoqueId)).reduce((s,a)=>s+alimTotal(a),0)+custoDieta().tot;
   return{ent,sai,saldo:ent-sai,aRec,aPag,alim};
 }
 function custoPorAnimal(){
@@ -477,7 +483,9 @@ function custoPorAnimal(){
     if(l.animal&&ensure(l.animal)){linhas[l.animal].direto+=v;return}
     if(l.cocheira){const occ=ativos.filter(a=>a.cocheira===l.cocheira);if(occ.length){occ.forEach(a=>linhas[a.id].direto+=v/occ.length);return}}
     if(!naoRat.has(l.categoria))geral+=v;});
-  arr("alimentacao").filter(a=>inPeriod(a.data)).forEach(a=>{const v=alimTotal(a);if(a.animal&&ensure(a.animal))linhas[a.animal].alim+=v;else alimGeral+=v});
+  const dI=dietaIds();const cd=custoDieta();Object.entries(cd.por).forEach(([id,v])=>{if(ensure(id))linhas[id].alim+=v});
+  arr("alimentacao").filter(a=>inPeriod(a.data)&&!dI.has(a.estoqueId)).forEach(a=>{const v=alimTotal(a);if(a.animal&&ensure(a.animal))linhas[a.animal].alim+=v;else alimGeral+=v});
+  arr("sanitario").filter(x=>inPeriod(x.data)&&parseNum(x.valorPorAnimal)).forEach(x=>(x.animais||[]).forEach(id=>{if(ensure(id))linhas[id].direto+=parseNum(x.valorPorAnimal)}));
   arr("cascos").filter(c=>inPeriod(c.data)&&!c.lancado&&c.animal).forEach(c=>{if(ensure(c.animal))linhas[c.animal].direto+=parseNum(c.valor)});
   arr("competicoes").filter(c=>inPeriod(c.dataCompeticao)&&!c.lancado&&c.animal).forEach(c=>{if(ensure(c.animal)){linhas[c.animal].comp=(linhas[c.animal].comp||0)+compDireto(c)}});
   if(ativos.length){ativos.forEach(a=>{linhas[a.id].alim+=alimGeral/n;if(S.cfg.rateio)linhas[a.id].rateio+=geral/n})}
@@ -487,7 +495,7 @@ function custoPorAnimal(){
 function saldoEstoque(e){return parseNum(e.quantidade)}
 function consumoDia(e){
   if(parseNum(e.consumoDiaFixo)>0)return{v:parseNum(e.consumoDiaFixo),fonte:"informado"};
-  if(parseNum(e.consumoAnimalDia)>0){const n=parseNum(e.nAnimais)||animaisAtivos().length;return{v:parseNum(e.consumoAnimalDia)*n,fonte:`${numFmt(e.consumoAnimalDia)} × ${n} animais`}}
+  if(parseNum(e.consumoAnimalDia)>0){const n=(Array.isArray(e.consomem)&&e.consomem.length)?e.consomem.filter(id=>S.animais[id]&&(S.animais[id].status||"Ativo")==="Ativo").length:(parseNum(e.nAnimais)||animaisAtivos().length);return{v:parseNum(e.consumoAnimalDia)*n,fonte:`${numFmt(e.consumoAnimalDia)} × ${n} animais`}}
   const ini=addDias(today(),-30);let q=0;arr("alimentacao").forEach(a=>{if(a.estoqueId===e.id&&a.data>=ini&&a.data<=today())q+=parseNum(a.quantidade)});
   return q>0?{v:q/30,fonte:"média das baixas (30 dias)"}:{v:0,fonte:""}}
 function previsao(e){
@@ -595,7 +603,10 @@ const MOD={
     {k:"unidade",l:"Unidade",t:"select",opts:opt(()=>L("unidade")),def:"kg"},
     {k:"minimo",l:"Estoque mínimo",t:"number",help:"Abaixo disso aparece o alerta."},
     {k:"consumoAnimalDia",l:"Consumo por animal por dia",t:"number",help:"Na unidade do item. Ex.: 4 (kg por dia)."},
-    {k:"nAnimais",l:"Nº de animais que consomem",t:"number",help:"Em branco: todos os animais ativos."},
+    {k:"consomem",l:"Quem consome",t:"animais",help:"Marque os animais que recebem este item. O custo diário (consumo por animal × custo por unidade) entra sozinho no custo de cada animal marcado, sem precisar lançar tratos."},
+    {k:"obsDieta",l:"Como é servido",t:"text",ph:"Ex.: 6 kg por refeição, 2 refeições"},
+    {k:"inicioConsumo",l:"Consumo desde",t:"date",help:"A partir desta data o custo diário entra no custo dos animais marcados."},
+    {k:"nAnimais",l:"Nº de animais que consomem",t:"number",help:"Só se não marcar os animais acima. Em branco: todos os ativos."},
     {k:"consumoDiaFixo",l:"Ou: consumo total por dia",t:"number",help:"Se preencher, vale este número. Em branco e sem os campos acima, o sistema usa a média das baixas dos últimos 30 dias."},
     {k:"prazoEntrega",l:"Prazo de entrega do fornecedor (dias)",t:"number",def:"3"},
     {k:"margem",l:"Margem de segurança (dias)",t:"number",def:"5",help:"Folga para atraso de entrega."},
@@ -682,6 +693,15 @@ const MOD={
     {k:"ferrador",l:"Ferrador",t:"text",sugg:()=>[...new Set(arr("cascos").map(c=>c.ferrador).filter(Boolean))]},
     {k:"valor",l:"Valor (R$)",t:"money",fin:1},
     {k:"descricao",l:"Descrição",t:"textarea",full:1,ph:"O que foi feito, tipo de ferradura, observações do casco…"}]},
+  sanitario:{titulo:"Manejo sanitário",singular:"aplicação",fem:1,fields:[
+    {k:"data",l:"Data da aplicação",t:"date",req:1,def:today},
+    {k:"tipo",l:"Tipo",t:"select",opts:opt(()=>SANIT_TIPOS),def:"Carrapaticida (Butox)",req:1},
+    {k:"produto",l:"Produto / vermífugo / vacina",t:"text",ph:"Ex.: Butox, Dectomax, Equest, Influenza + Tétano",sugg:()=>[...new Set(arr("sanitario").map(x=>x.produto).filter(Boolean))]},
+    {k:"animais",l:"Animais que receberam",t:"animais",req:1},
+    {k:"valorPorAnimal",l:"Valor do produto por animal (R$)",t:"money",fin:1,help:"Entra no custo de cada animal marcado."},
+    {k:"reaplicarEm",l:"Reaplicar em",t:"date",help:"Data da próxima dose. Aparece no Painel 7 dias antes. No vermífugo, a data é sugerida sozinha."},
+    {k:"aplicador",l:"Quem aplicou",t:"text",sugg:()=>[...new Set(arr("sanitario").map(x=>x.aplicador).filter(Boolean))]},
+    {k:"obs",l:"Observações",t:"textarea",full:1}]},
   tarefas:{titulo:"Tarefas e manejo",singular:"tarefa",fields:[
     {k:"data",l:"Data",t:"date",req:1,def:today},
     {k:"titulo",l:"Tarefa",t:"text",req:1,ph:"Vacina de influenza, ferrageamento…"},
@@ -699,6 +719,8 @@ function fieldHTML(f,val,form){
   let inp="";
   if(f.t==="pedigree"){return `<div class="field full" data-k="${f.k}" data-ped="${f.k}"><label>${esc(f.l)}</label>${f.help?`<span class="help">${esc(f.help)}</span>`:""}${pedHTML(val,f.k)}</div>`}
   if(f.t==="foto"){return `<div class="field${f.full?" full":""} foto-field" data-k="${f.k}" data-foto="${f.k}"><label>${esc(f.l)}</label><div class="foto-box"><div class="foto-prev">${val?`<img src="${esc((form&&form[f.k+"Mini"])||val)}" alt="Foto do animal">`:`<span>Sem foto</span>`}</div><div class="foto-acts"><label class="btn small" for="${id}">${val?"Trocar foto":"Escolher foto"}</label><input type="file" id="${id}" accept="image/*" hidden>${val?`<button type="button" class="btn small" data-fotoenq>Enquadrar cabeça</button><button type="button" class="btn small ghost" data-fotodel>Remover</button>`:""}${f.full?`<span class="help">Do celular dá para tirar a foto na hora. A imagem é reduzida automaticamente.</span>`:""}</div></div><input type="hidden" name="${f.k}" value="${esc(val||"")}"><input type="hidden" name="${f.k}Mini" value="${esc((val&&form&&form[f.k+"Mini"])||"")}"></div>`}
+  if(f.t==="animais"){const sel=new Set(Array.isArray(val)?val:[]);const as=animaisAtivos().sort((a,b)=>String(a.nome).localeCompare(b.nome));
+    return `<div class="field full" data-k="${f.k}"><label>${esc(f.l)}</label>${f.help?`<span class="help">${esc(f.help)}</span>`:""}<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px 12px;margin-top:6px">${as.map(a=>`<label style="display:flex;gap:8px;align-items:center;font-weight:400;text-transform:none;letter-spacing:0;font-size:14px"><input type="checkbox" name="${f.k}" value="${esc(a.id)}"${sel.has(a.id)?" checked":""}><span>${esc(a.nome)}${a.apelido?` <span style="color:var(--muted)">(${esc(a.apelido)})</span>`:""}</span></label>`).join("")}</div><div style="margin-top:6px"><button type="button" class="btn small ghost" onclick="this.closest('.field').querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=true)">Marcar todos</button> <button type="button" class="btn small ghost" onclick="this.closest('.field').querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=false)">Limpar</button></div></div>`}
   if(f.t==="list"){const rows=Array.isArray(val)?val:[];
     return `<div class="field full" data-k="${f.k}" data-list="${f.k}"><label>${esc(f.l)}</label><div class="subhead">${f.sub.map(x=>`<span>${esc(x.l)}</span>`).join("")}<span></span></div><div class="sublist">${rows.map(r=>subRowHTML(f,r)).join("")}</div><div><button type="button" class="btn small" data-subadd="${f.k}">+ Adicionar item</button></div></div>`}
   if(f.t==="select"){const os=f.opts(form);const cur=val??"";let has=os.some(o=>String(o.v)===String(cur));
@@ -713,14 +735,14 @@ function fieldHTML(f,val,form){
 }
 let subSeq=0;
 function subRowHTML(f,r){r=r||{};subSeq++;return `<div class="subrow">${f.sub.map(x=>`<input type="text" data-sk="${x.k}" id="sub_${f.k}_${subSeq}_${x.k}" aria-label="${esc(x.l)}" placeholder="${esc(x.ph||x.l)}"${x.money?' inputmode="decimal"':""} value="${esc(x.money&&r[x.k]!==undefined&&r[x.k]!==""?String(r[x.k]).replace(".",","):r[x.k]??"")}">`).join("")}<button type="button" class="btn small ghost" data-subdel aria-label="Remover item">✕</button></div>`}
-function readForm(form,fields){const o={};fields.forEach(f=>{if(f.fin&&!can("fin"))return;if(f.t==="pedigree"){const g={};PED_KEYS.forEach(([k])=>{const el=form.elements[f.k+"__"+k];if(el&&el.value.trim())g[k]=el.value.trim()});o[f.k]=g;return}if(f.t==="foto"){o[f.k]=form.elements[f.k]?form.elements[f.k].value:"";const mm=form.elements[f.k+"Mini"];o[f.k+"Mini"]=o[f.k]&&mm?mm.value:"";return}if(f.t==="list"){const box=form.querySelector(`[data-list="${f.k}"]`);o[f.k]=box?[...box.querySelectorAll(".subrow")].map(row=>{const r={};f.sub.forEach(x=>{const v=row.querySelector(`[data-sk="${x.k}"]`).value.trim();r[x.k]=x.money?(v===""?"":parseNum(v)):v});return r}).filter(r=>f.sub.some(x=>r[x.k]!==""&&r[x.k]!==undefined)):[];return}const el=form.elements[f.k];if(!el)return;let v=el.value;if(f.t==="money"||f.t==="number")v=v.trim()===""?"":parseNum(v);else v=v.trim();o[f.k]=v});return o}
+function readForm(form,fields){const o={};fields.forEach(f=>{if(f.fin&&!can("fin"))return;if(f.t==="pedigree"){const g={};PED_KEYS.forEach(([k])=>{const el=form.elements[f.k+"__"+k];if(el&&el.value.trim())g[k]=el.value.trim()});o[f.k]=g;return}if(f.t==="animais"){o[f.k]=[...form.querySelectorAll(`input[name="${f.k}"]:checked`)].map(x=>x.value);return}if(f.t==="foto"){o[f.k]=form.elements[f.k]?form.elements[f.k].value:"";const mm=form.elements[f.k+"Mini"];o[f.k+"Mini"]=o[f.k]&&mm?mm.value:"";return}if(f.t==="list"){const box=form.querySelector(`[data-list="${f.k}"]`);o[f.k]=box?[...box.querySelectorAll(".subrow")].map(row=>{const r={};f.sub.forEach(x=>{const v=row.querySelector(`[data-sk="${x.k}"]`).value.trim();r[x.k]=x.money?(v===""?"":parseNum(v)):v});return r}).filter(r=>f.sub.some(x=>r[x.k]!==""&&r[x.k]!==undefined)):[];return}const el=form.elements[f.k];if(!el)return;let v=el.value;if(f.t==="money"||f.t==="number")v=v.trim()===""?"":parseNum(v);else v=v.trim();o[f.k]=v});return o}
 
 function openForm(col,id,preset){
   const m=MOD[col];const rec=id?Object.assign({},S[col][id]):Object.assign({},preset||{});
   if(!id)m.fields.forEach(f=>{if(rec[f.k]===undefined&&f.def!==undefined)rec[f.k]=typeof f.def==="function"?f.def():f.def});
   const root=$("#modalRoot");
   root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"${m.fields.some(f=>f.t==="pedigree")?' style="width:min(880px,100%)"':""}>
-    <header><h2 id="mt">${id?"Editar":"Novo"} ${esc(m.singular)}</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
+    <header><h2 id="mt">${id?"Editar":m.fem?"Nova":"Novo"} ${esc(m.singular)}</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
     <form id="mf" novalidate>${m.fields.filter(f=>!f.fin||can("fin")).map(f=>(f.secao?`<h3 class="form-sec">${esc(f.secao)}</h3>`:"")+fieldHTML(f,rec[f.k],rec)).join("")}</form>
     <footer>${id&&can("edit")?`<button type="button" class="btn danger" id="mDel">Excluir</button>`:""}<div class="right"><button type="button" class="btn" id="mCancel">${can("edit")?"Cancelar":"Fechar"}</button>${can("edit")?`<button type="button" class="btn primary" id="mSave">Salvar</button>`:""}</div></footer></div></div>`;
   const form=$("#mf");const close=()=>{root.innerHTML="";document.removeEventListener("keydown",onKey)};
@@ -737,6 +759,13 @@ function openForm(col,id,preset){
       const q=b.querySelector("[data-fotoenq]");if(q)q.onclick=()=>{const v=form.elements[f.k].value;abrirEnquadrar(v,mi=>redraw(v,mi))}}
     bindFoto()});
   form.addEventListener("click",e=>{const a=e.target.closest("[data-subadd]");if(a){const f=m.fields.find(x=>x.k===a.dataset.subadd);const box=form.querySelector(`[data-list="${f.k}"] .sublist`);box.insertAdjacentHTML("beforeend",subRowHTML(f,{}));box.lastElementChild.querySelector("input").focus();return}const d=e.target.closest("[data-subdel]");if(d)d.closest(".subrow").remove()});
+  if(col==="sanitario"){const re=form.elements.reaplicarEm;let manual=!!(rec&&rec.reaplicarEm);re.addEventListener("input",()=>{manual=true});
+    const hint=document.createElement("span");hint.className="help";hint.style.color="var(--accent)";re.closest(".field").appendChild(hint);
+    const sug=()=>{if(manual)return;const tipo=form.elements.tipo.value,data=form.elements.data.value;hint.textContent="";if(tipo!=="Vermifugação"||!data){if(!rec||!rec.reaplicarEm)re.value="";return}
+      const sel=[...form.querySelectorAll('input[name="animais"]:checked')].map(x=>x.value);
+      const ant=arr("sanitario").filter(x=>x.id!==(rec&&rec.id)&&x.tipo==="Vermifugação"&&x.data<data&&x.data>=addDias(data,-25)&&(x.animais||[]).some(id=>sel.includes(id)));
+      if(ant.length){re.value=addMeses(data,6);hint.textContent="Reforço feito: próxima em 6 meses (ou antes, se precisar)."}else{re.value=addDias(data,15);hint.textContent="1ª dose: reforço em 15 dias. Depois do reforço, o sistema sugere 6 meses."}};
+    form.elements.tipo.addEventListener("change",sug);form.elements.data.addEventListener("change",sug);form.addEventListener("change",e=>{if(e.target.name==="animais")sug()});sug()}
   if(col==="reproducao"&&form.elements.compraId){form.elements.compraId.addEventListener("change",()=>{const c=S.compras[form.elements.compraId.value];if(!c)return;const rs=resumoCompra(c);
       if(rs.valorCob)form.elements.valorCobertura.value=String(Math.round(rs.valorCob*100)/100).replace(".",",");
       if(rs.extraCob&&form.elements.extrasPacote)form.elements.extrasPacote.value=String(Math.round(rs.extraCob*100)/100).replace(".",",");
@@ -757,7 +786,7 @@ function openForm(col,id,preset){
   if(!can("edit")){form.querySelectorAll("input,select,textarea,button").forEach(x=>x.disabled=true);return}
   $("#mSave").onclick=()=>{
     const data=readForm(form,m.fields);
-    const miss=m.fields.filter(f=>f.req&&(data[f.k]===""||data[f.k]===undefined));
+    const miss=m.fields.filter(f=>f.req&&(data[f.k]===""||data[f.k]===undefined||(Array.isArray(data[f.k])&&!data[f.k].length)));
     form.querySelectorAll(".field").forEach(x=>x.style.removeProperty("--x"));
     if(miss.length){toast("Preencha: "+miss.map(f=>f.l).join(", "));const el=form.elements[miss[0].k];if(el)el.focus();return}
     const obj=Object.assign({},id?S[col][id]:{},data,{id:id||uid(),atualizado:new Date().toISOString()});
@@ -838,6 +867,7 @@ const IC={
   cocheiras:'<path d="M3 21V9l9-6 9 6v12M3 21h18M8 21v-7h8v7M8 14l8 7M16 14l-8 7"/>',
   estoque:'<path d="M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10"/>',
   tarefas:'<path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
+  sanitario:'<path d="M18 2l4 4M17 7l3-3M19 9l-8.7 8.7a2 2 0 0 1-2.8 0l-1.2-1.2a2 2 0 0 1 0-2.8L15 5"/><path d="M9 11l4 4M5 19l-3 3M14 4l6 6"/>',
   cascos:'<path d="M6 20V11a6 6 0 0 1 12 0v9"/><path d="M9 20v-8a3 3 0 0 1 6 0v8"/><path d="M4 20h4M16 20h4"/>',
   custos:'<path d="M3 3v18h18M7 15l4-4 3 3 5-6"/>',
   inseminacao:'<path d="M9 3h6M10 3v5l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3M7.5 14h9"/>',
@@ -846,7 +876,7 @@ const IC={
   competicoes:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>',
   configuracoes:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'
 };
-const VIEWS=[["painel","Painel"],["financeiro","Entradas e saídas"],["alimentacao","Alimentação"],["animais","Animais"],["cocheiras","Cocheiras"],["estoque","Estoque"],["tarefas","Tarefas"],["cascos","Ferrageamento"],["reproducao","Reprodução"],["inseminacao","Inseminação"],["competicoes","Competições"],["compras","Compras parceladas"],["custos","Custo por animal"],["configuracoes","Configurações"]];
+const VIEWS=[["painel","Painel"],["financeiro","Entradas e saídas"],["alimentacao","Alimentação"],["animais","Animais"],["cocheiras","Cocheiras"],["estoque","Estoque"],["tarefas","Tarefas"],["cascos","Ferrageamento"],["sanitario","Manejo sanitário"],["reproducao","Reprodução"],["inseminacao","Inseminação"],["competicoes","Competições"],["compras","Compras parceladas"],["custos","Custo por animal"],["configuracoes","Configurações"]];
 function renderNav(){
   $("#nav").innerHTML=VIEWS.filter(v=>viewOk(v[0])).map(([k,t])=>`<a href="#${k}" data-view="${k}"${UI.view===k?' aria-current="page"':""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>${t}</a>`).join("");
 }
@@ -861,7 +891,8 @@ function renderPeriod(){document.querySelectorAll(".seg button").forEach(b=>b.se
 
 /* ---------- telas ---------- */
 const V={};
-V.painel=()=>{
+V.painel=()=>sanitAlerta()+painelBase();
+function painelBase(){
   if(!can("fin"))return painelOperacional();
   const r=resumoFin();const ativos=animaisAtivos().length;
   const pedidos=arr("estoque").map(e=>({e,s:statusPedido(e)})).filter(x=>!x.s.p.semConsumo||x.s.p.abaixoMin).sort((a,b)=>a.s.p.diasAtePedir-b.s.p.diasAtePedir);
@@ -934,8 +965,11 @@ V.financeiro=()=>{
 V.alimentacao=()=>{
   const rows=arr("alimentacao").filter(a=>inPeriod(a.data)).sort((a,b)=>String(b.data).localeCompare(a.data));
   const porAl={};rows.forEach(a=>porAl[a.alimento]=(porAl[a.alimento]||0)+alimTotal(a));
-  const tot=rows.reduce((s,a)=>s+alimTotal(a),0);
-  return `<div class="kpis">${!can("fin")?`<div class="kpi"><span class="lbl">Tratos registrados</span><span class="val">${rows.length}</span><span class="hint">${esc(periodLabel())}</span></div>`:`<div class="kpi"><span class="lbl">Custo de alimentação</span><span class="val">${money(tot)}</span><span class="hint">${esc(periodLabel())}</span></div>`}
+  const dI=dietaIds();const tot=rows.filter(a=>!dI.has(a.estoqueId)).reduce((s,a)=>s+alimTotal(a),0)+custoDieta().tot;
+  itensDieta().forEach(e=>{const v=parseNum(e.consumoAnimalDia)*parseNum(e.custoUnit)*diasDieta(e)*e.consomem.filter(id=>S.animais[id]&&(S.animais[id].status||"Ativo")==="Ativo").length;if(v)porAl[e.item]=(porAl[e.item]||0)+v});
+  const dieta=itensDieta();const nomesA=ids=>ids.map(id=>S.animais[id]).filter(a=>a&&(a.status||"Ativo")==="Ativo").map(a=>a.apelido||a.nome.split(" ")[0]);
+  const dietaH=dieta.length?`<section class="panel" style="margin-bottom:16px"><h2>Dieta diária <small>o custo entra sozinho em cada animal</small></h2><div class="list">${dieta.map(e=>{const ns=nomesA(e.consomem);const dia=parseNum(e.consumoAnimalDia);return `<div class="row" data-open="estoque:${esc(e.id)}" style="cursor:pointer"><div><div><strong>${esc(e.item)}</strong> · ${numFmt(dia)} ${esc(e.unidade||"")} por animal/dia${e.obsDieta?` <span style="color:var(--muted)">(${esc(e.obsDieta)})</span>`:""}</div><div class="sub">${ns.length} animais: ${esc(ns.join(", "))}</div></div>${can("fin")?`<div class="num" style="text-align:right">${money(dia*parseNum(e.custoUnit))}<div class="sub">por animal/dia</div></div>`:""}</div>`}).join("")}</div></section>`:"";
+  return dietaH+`<div class="kpis">${!can("fin")?`<div class="kpi"><span class="lbl">Tratos registrados</span><span class="val">${rows.length}</span><span class="hint">${esc(periodLabel())}</span></div>`:`<div class="kpi"><span class="lbl">Custo de alimentação</span><span class="val">${money(tot)}</span><span class="hint">${esc(periodLabel())}</span></div>`}
   ${!can("fin")?"":Object.entries(porAl).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`<div class="kpi"><span class="lbl">${esc(k)}</span><span class="val">${money(v)}</span></div>`).join("")}</div>
   <p class="note" style="margin:0 0 12px">Aqui você registra o que foi servido (consumo). Ao escolher um item em “Baixar do estoque”, a quantidade sai do estoque automaticamente. A compra do alimento continua sendo lançada em Entradas e saídas.</p>
   ${toolbar("alimentacao",`<button type="button" class="btn" data-csv="alimentacao">Exportar planilha</button>`)}
@@ -1001,6 +1035,37 @@ V.estoque=()=>{
 // Ferrageamento: de quanto em quanto tempo cada animal precisa ferrar / casquear
 const CASCO_PADRAO={ferr:45,casq:45};
 function cascoTipo(sv){sv=sv||"";return{ferr:/ferr/i.test(sv),casq:/casq/i.test(sv)}}
+const SANIT_TIPOS=["Carrapaticida (Butox)","Antiparasitário (Dectomax)","Vermifugação","Vacinação","Outro"];
+function sanitNomes(ids){return (ids||[]).map(id=>S.animais[id]).filter(Boolean).map(a=>a.apelido||a.nome.split(" ")[0])}
+function sanitPendentes(){const l=arr("sanitario");return l.filter(x=>x.reaplicarEm&&!l.some(y=>y!==x&&y.tipo===x.tipo&&y.data>x.data&&(y.animais||[]).some(id=>(x.animais||[]).includes(id))))
+  .map(x=>Object.assign({},x,{_dias:Math.round((new Date(x.reaplicarEm+"T12:00:00")-new Date(today()+"T12:00:00"))/864e5)})).sort((a,b)=>a.reaplicarEm.localeCompare(b.reaplicarEm))}
+function sanitPorAnimal(){const as=animaisAtivos().sort((a,b)=>String(a.nome).localeCompare(b.nome));if(!as.length)return"";const l=arr("sanitario");
+  const cel=(aid,tipos)=>{const r=l.filter(x=>tipos.includes(x.tipo)&&(x.animais||[]).includes(aid)).sort((a,b)=>String(b.data).localeCompare(a.data))[0];if(!r)return `<td style="color:var(--muted)">—</td>`;
+    const d=r.reaplicarEm?Math.round((new Date(r.reaplicarEm+"T12:00:00")-new Date(today()+"T12:00:00"))/864e5):null;
+    return `<td><span class="num">${dBR(r.data)}</span>${r.produto?` <span style="color:var(--muted)">${esc(r.produto)}</span>`:""}${r.reaplicarEm?`<div style="font-size:12.5px" class="${d<0?"neg":""}">${d<0?"atrasada · ":"próxima "}${dBR(r.reaplicarEm)}</div>`:""}</td>`};
+  return `<div class="card" style="margin-bottom:16px"><h3 style="margin:0 0 8px">Situação por animal</h3><div class="table-wrap"><table><thead><tr><th>Animal</th><th>Carrapaticida / antiparasitário</th><th>Vermifugação</th><th>Vacinação</th></tr></thead><tbody>${as.map(a=>`<tr><td><strong>${esc(a.nome)}</strong>${a.apelido?` <span style="color:var(--muted)">“${esc(a.apelido)}”</span>`:""}</td>${cel(a.id,["Carrapaticida (Butox)","Antiparasitário (Dectomax)"])}${cel(a.id,["Vermifugação"])}${cel(a.id,["Vacinação"])}</tr>`).join("")}</tbody></table></div></div>`}
+function sanitAlerta(){const p=sanitPendentes().filter(x=>x._dias<=7);if(!p.length)return"";
+  return `<div class="card" style="margin-bottom:16px;border:1px solid var(--accent)"><h3 style="margin:0 0 8px">Reaplicações do manejo sanitário</h3><div class="list">${p.map(x=>`<div class="row" data-open="sanitario:${esc(x.id)}" style="cursor:pointer"><div><div><strong>${esc(x.tipo)}</strong>${x.produto?" · "+esc(x.produto):""}</div><div class="sub">${esc(sanitNomes(x.animais).join(", "))}</div></div><span class="pill ${x._dias<0?"out":"warn"}">${x._dias<0?`atrasada ${-x._dias} d`:x._dias===0?"hoje":`em ${x._dias} d`} · ${dBR(x.reaplicarEm)}</span></div>`).join("")}</div></div>`}
+V.sanitario=()=>{
+  const per=arr("sanitario").filter(x=>inPeriod(x.data));const gasto=per.reduce((s,x)=>s+parseNum(x.valorPorAnimal)*(x.animais||[]).length,0);
+  const pend=sanitPendentes();const atras=pend.filter(x=>x._dias<0).length,breve=pend.filter(x=>x._dias>=0&&x._dias<=7).length;
+  const rows=arr("sanitario").sort((a,b)=>String(b.data).localeCompare(a.data));
+  return `<div class="kpis">${can("fin")?`<div class="kpi"><span class="lbl">Gasto em ${esc(periodLabel())}</span><span class="val">${money(gasto)}</span><span class="hint">${per.length} aplicaç${per.length===1?"ão":"ões"}</span></div>`:""}
+   <div class="kpi ${atras?"neg":""}"><span class="lbl">Reaplicações atrasadas</span><span class="val">${atras}</span></div>
+   <div class="kpi"><span class="lbl">Reaplicar nos próximos 7 dias</span><span class="val">${breve}</span></div></div>
+  ${pend.length?`<div class="card" style="margin-bottom:16px"><h3 style="margin:0 0 8px">Próximas reaplicações</h3><div class="list">${pend.map(x=>`<div class="row" data-open="sanitario:${esc(x.id)}" style="cursor:pointer"><div><div><strong>${esc(x.tipo)}</strong>${x.produto?" · "+esc(x.produto):""}</div><div class="sub">${esc(sanitNomes(x.animais).join(", "))} · última em ${dBR(x.data)}</div></div><span class="pill ${x._dias<0?"out":x._dias<=7?"warn":"neutral"}">${x._dias<0?`atrasada ${-x._dias} d`:x._dias===0?"hoje":`em ${x._dias} d`} · ${dBR(x.reaplicarEm)}</span></div>`).join("")}</div><p class="note" style="margin:8px 0 0">Ao registrar a reaplicação (mesmo tipo e animal, data mais nova), o aviso some.</p></div>`:""}
+  ${sanitPorAnimal()}
+  ${toolbar("sanitario",`<button type="button" class="btn" data-csv="sanitario">Exportar planilha</button>`)}
+  ${tableView("sanitario",[
+    {l:"Data",h:x=>`<span class="num">${dBR(x.data)}</span>`,v:x=>dBR(x.data)},
+    {l:"Tipo",h:x=>`<strong>${esc(x.tipo||"")}</strong>${x.produto?`<div style="font-size:12.5px;color:var(--muted)">${esc(x.produto)}</div>`:""}`,v:x=>x.tipo+" "+(x.produto||"")},
+    {l:"Animais",wrap:1,v:x=>sanitNomes(x.animais).join(", ")},
+    {l:"Por animal",r:1,fin:1,h:x=>x.valorPorAnimal?`<span class="num">${money(x.valorPorAnimal)}</span>`:""},
+    {l:"Total",r:1,fin:1,h:x=>x.valorPorAnimal?`<span class="num">${money(parseNum(x.valorPorAnimal)*(x.animais||[]).length)}</span>`:""},
+    {l:"Reaplicar em",h:x=>x.reaplicarEm?`<span class="num">${dBR(x.reaplicarEm)}</span>`:""},
+    {l:"Aplicou",k:"aplicador"}
+  ],rows,{vazio:"Nenhuma aplicação registrada ainda."})}`;
+};
 function cascoResumo(){const out=[];const por={};arr("cascos").forEach(c=>{if(c.animal&&S.animais[c.animal])(por[c.animal]=por[c.animal]||[]).push(c)});
   Object.entries(por).forEach(([aid,l])=>{l.sort((a,b)=>String(a.data).localeCompare(b.data));
     ["ferr","casq"].forEach(tp=>{const ds=l.filter(c=>cascoTipo(c.servico)[tp]&&c.data).map(c=>c.data);if(!ds.length)return;
@@ -1367,7 +1432,7 @@ function exportCSV(col){
   const head=m.fields.filter(f=>f.t!=="foto").map(f=>f.l);if(col==="alimentacao")head.push("Total (R$)");if(col==="competicoes")head.push("Custos informados (R$)","Gasto extra do preparo (R$)","Custo total (R$)");
   const lines=[head.map(csvCell).join(";")];
   rows.sort((a,b)=>String(a.data||a.dataCompeticao||a.dataInseminacao||a.nome||a.item||"").localeCompare(String(b.data||b.dataCompeticao||b.dataInseminacao||b.nome||b.item||""))).forEach(r=>{
-    const cells=m.fields.filter(f=>f.t!=="foto").map(f=>{const v=r[f.k];if(f.t==="pedigree")return PED_KEYS.filter(([k])=>v&&v[k]).map(([k])=>pedRot(k)+": "+v[k]).join(" | ");if(f.t==="list")return (v||[]).map(x=>f.sub.map(sf=>sf.money?(x[sf.k]!==""&&x[sf.k]!=null?money(x[sf.k]):""):x[sf.k]).filter(Boolean).join(" / ")).join(" | ");if(f.t==="money"||f.t==="number")return csvNum(v);if(f.t==="date")return dBR(v);if(f.k==="animal")return animalNome(v);if(f.k==="cocheira")return cocheiraNome(v);if(f.k==="estoqueId")return estoqueNome(v);return v??""});
+    const cells=m.fields.filter(f=>f.t!=="foto").map(f=>{const v=r[f.k];if(f.t==="animais")return (v||[]).map(animalNome).join(", ");if(f.t==="pedigree")return PED_KEYS.filter(([k])=>v&&v[k]).map(([k])=>pedRot(k)+": "+v[k]).join(" | ");if(f.t==="list")return (v||[]).map(x=>f.sub.map(sf=>sf.money?(x[sf.k]!==""&&x[sf.k]!=null?money(x[sf.k]):""):x[sf.k]).filter(Boolean).join(" / ")).join(" | ");if(f.t==="money"||f.t==="number")return csvNum(v);if(f.t==="date")return dBR(v);if(f.k==="animal")return animalNome(v);if(f.k==="cocheira")return cocheiraNome(v);if(f.k==="estoqueId")return estoqueNome(v);return v??""});
     if(col==="alimentacao")cells.push(csvNum(alimTotal(r)));if(col==="competicoes"){const p=prepCalc(r);cells.push(csvNum(compDireto(r)),csvNum(p?p.extra:0),csvNum(compTotal(r)))}lines.push(cells.map(csvCell).join(";"))});
   offerFile(`glamar-${col}-${UI.modo==="tudo"?"completo":UI.modo==="ano"?UI.mes.slice(0,4):UI.mes}.csv`,"﻿"+lines.join("\r\n"));
 }
