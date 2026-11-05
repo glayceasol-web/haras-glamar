@@ -356,7 +356,7 @@ function mergeCfg(c){const m=JSON.parse(JSON.stringify(DEFAULT_CFG));Object.assi
 function clean(o){const r={};for(const k in o){if(o[k]!==undefined)r[k]=o[k]}return r}
 function supaErr(r){if(r&&r.error)throw r.error;return r}
 function put(col,obj){obj=clean(obj);S[col][obj.id]=obj;if(backend==="db")queue(()=>DB.collection(col).doc(obj.id).set(obj));else if(backend==="supa")queue(async()=>supaErr(await SB.from("registros").upsert({colecao:col,id:obj.id,dados:obj})));else saveLocal();}
-function del(col,id){delete S[col][id];if(backend==="db")queue(()=>DB.collection(col).doc(id).delete());else if(backend==="supa")queue(async()=>supaErr(await SB.from("registros").delete().eq("colecao",col).eq("id",id)));else saveLocal();}
+function del(col,id){const fx=col==="lancamentos"&&S[col][id]&&S[col][id].fixoDe;if(fx&&S.lancamentos[fx]&&id!==fx){const o=S.lancamentos[fx];put("lancamentos",Object.assign({},o,{fixoPulados:[...new Set([...(o.fixoPulados||[]),S[col][id].data.slice(0,7)])]}))}delete S[col][id];if(backend==="db")queue(()=>DB.collection(col).doc(id).delete());else if(backend==="supa")queue(async()=>supaErr(await SB.from("registros").delete().eq("colecao",col).eq("id",id)));else saveLocal();}
 function putCfg(){if(!can("cfg"))return;if(backend==="supa"){const c=JSON.parse(JSON.stringify(S.cfg));queue(async()=>supaErr(await SB.from("registros").upsert({colecao:"config",id:"geral",dados:c})));return}if(backend==="db"){const c=JSON.parse(JSON.stringify(S.cfg));queue(()=>DB.doc("config/geral").set(c))}else saveLocal();}
 
 function setSync(state,text){const n=$("#syncNote");n.innerHTML=`<span class="dot ${state}"></span>${esc(text)}`}
@@ -562,6 +562,8 @@ const MOD={
     {k:"cocheira",l:"Cocheira (opcional)",t:"select",opts:cocheiraOpts,help:"Dividido entre os animais da cocheira."},
     {k:"pagamento",l:"Forma de pagamento",t:"select",opts:()=>[{v:"",t:"—"},...L("pagamento").map(v=>({v,t:v}))]},
     {k:"situacao",l:"Situação",t:"select",opts:opt(()=>["Pago","Pendente"]),def:"Pago"},
+    {k:"fixoMensal",l:"Custo fixo: repetir todo mês",t:"select",opts:opt(()=>["Não","Sim"]),def:"Não",help:"Ex.: salário do treinador. O sistema cria sozinho o lançamento de cada mês, no mesmo dia."},
+    {k:"fixoAte",l:"Repetir até",t:"date",help:"Em branco: repete sem data para acabar."},
     {k:"obs",l:"Observações",t:"textarea",full:1}]},
   alimentacao:{titulo:"Alimentação",singular:"registro de alimentação",fields:[
     {k:"data",l:"Data",t:"date",req:1,def:today},
@@ -1315,6 +1317,7 @@ function render(){
   if(UI.view==="cocheiras")$("#periodBox").style.visibility="visible";
   const act=document.activeElement;const focusId=act&&act.id;const selS=act&&act.selectionStart;
   const v=$("#view");
+  if(UI.loaded&&!UI.fixosOk){UI.fixosOk=true;gerarFixos()}
   if(!UI.loaded){v.innerHTML=`<p class="empty">Carregando os dados do CTE…</p>`;return}
   const vazio=COLS.every(c=>!Object.keys(S[c]).length);
   if(vazio&&!S.cfg.iniciado&&UI.view==="painel"&&ROLE==="admin"&&!PEND){v.innerHTML=welcome();return}
@@ -1419,6 +1422,12 @@ function openCompra(id){
 }
 
 /* ---------- mensalidades ---------- */
+function gerarFixos(){if(!can("fin")||!can("edit"))return;const atual=today().slice(0,7);let n=0;
+  arr("lancamentos").filter(l=>l.fixoMensal==="Sim"&&!l.fixoDe&&l.data).forEach(l=>{const dia=l.data.slice(8,10);let ym=l.data.slice(0,7);
+    for(let k=0;k<240;k++){ym=addMeses(ym+"-01",1).slice(0,7);if(ym>atual)break;const data=ym+"-"+String(Math.min(+dia,28)).padStart(2,"0");if(l.fixoAte&&data>l.fixoAte)break;
+      const id="fixo-"+l.id+"-"+ym;if(S.lancamentos[id]||(l.fixoPulados||[]).includes(ym))continue;
+      const c=Object.assign({},l,{id,data,fixoDe:l.id,fixoMensal:"Não",situacao:data<=today()?"Pago":"Pendente",atualizado:new Date().toISOString()});delete c.fixoAte;delete c.fixoPulados;put("lancamentos",c);n++}});
+  if(n)toast(`${n} custo${n>1?"s":""} fixo${n>1?"s":""} do mês gerado${n>1?"s":""}`)}
 function gerarMensalidades(){
   const mes=UI.mes;const hosp=animaisAtivos().filter(a=>a.categoria==="Hospedado"&&parseNum(a.mensalidade)>0);
   if(!hosp.length){toast("Nenhum animal hospedado com mensalidade cadastrada");return}
