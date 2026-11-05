@@ -187,6 +187,11 @@ tfoot td{font-weight:700;background:var(--surface-2);border-top:2px solid var(--
 .ped .cell input{padding:4px 6px;font-size:13.5px;width:100%}
 .ped .g1 .nm{font-size:15px}
 .ped-sub{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:16px}
+.ficha-a{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--card,transparent)}
+.ficha-a img,.ficha-sem{width:84px;height:84px;border-radius:10px;object-fit:cover;flex:none}
+.ficha-sem{display:grid;place-items:center;background:var(--line);color:var(--muted);font-size:12px}
+.ficha-a strong{display:block;font-size:15.5px}.ficha-p{display:block;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .ped-sub img{width:72px;height:72px;border-radius:10px;object-fit:cover}
 .ped-sub h3{font-size:20px}
 .thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;display:block}
@@ -381,7 +386,7 @@ async function loadSupa(){
 }
 let PEND=null;
 function pendHTML(){if(!PEND||UI.view!=="painel")return"";const n=(PEND.animais||[]).length;const novos=(PEND.animais||[]).filter(a=>!S.animais[a.id]).length;
-  return `<div class="card" style="margin-bottom:16px;border:1px solid var(--accent)"><h3 style="margin:0 0 6px">Cadastros prontos para entrar no sistema</h3><p style="margin:0 0 10px">${n} animais com fotos e genealogia (${novos} novos), preparados a partir das fichas de registro. Confira e clique para incluir. Nada do que já está lançado é apagado.</p><p style="margin:0 0 10px;font-size:13.5px;color:var(--muted)">${(PEND.animais||[]).map(a=>esc(a.nome)).join(" · ")}</p><button type="button" class="btn primary" id="pendImport">Incluir no sistema</button> <button type="button" class="btn" id="pendLater">Agora não</button></div>`}
+  return `<div class="card" style="margin-bottom:16px;border:1px solid var(--accent)"><h3 style="margin:0 0 6px">${esc(PEND.titulo||"Cadastros prontos para entrar no sistema")}</h3><p style="margin:0 0 10px">${PEND.texto?esc(PEND.texto):`${n} animais com fotos e genealogia (${novos} novos), preparados a partir das fichas de registro.`} Confira e clique para incluir. Nada do que já está lançado é apagado.</p><p style="margin:0 0 10px;font-size:13.5px;color:var(--muted)">${(PEND.animais||[]).map(a=>esc(a.nome)).join(" · ")}</p><button type="button" class="btn primary" id="pendImport">Incluir no sistema</button> <button type="button" class="btn" id="pendLater">Agora não</button></div>`}
 function showLogin(modo){
   let el=$("#loginBox");if(!el){el=document.createElement("div");el.id="loginBox";document.body.appendChild(el)}
   const conv=modo==="convite";if(conv)modo="nova";
@@ -611,7 +616,7 @@ const MOD={
     {k:"genealogiaGaranhao",l:"Genealogia do garanhão (pai)",t:"pedigree",help:"Se o garanhão estiver cadastrado em Animais com genealogia, preenche sozinho."},
     {k:"tipoCobertura",l:"Tipo de cobertura",t:"select",opts:opt(()=>["Inseminação artificial","Transferência de embrião","Monta natural","Monta controlada"]),def:"Inseminação artificial"},
     {k:"dataInseminacao",l:"Data da inseminação / cobertura",t:"date",req:1,def:today},
-    {k:"receptora",l:"Receptora",t:"text",sugg:()=>arr("animais").filter(a=>a.sexo==="Fêmea").map(a=>a.nome),ph:"Nome da égua receptora",help:"Deixe em branco se a própria doadora for gestar."},
+    {k:"receptora",l:"Receptora",t:"text",sugg:()=>arr("animais").filter(a=>a.sexo==="Fêmea").sort((a,b)=>(/receptora/i.test(b.obs||"")?1:0)-(/receptora/i.test(a.obs||"")?1:0)).map(a=>a.nome),ph:"Nome da égua receptora",help:"Deixe em branco se a própria doadora for gestar."},
     {k:"veterinario",l:"Veterinário",t:"text"},
     {k:"compraId",l:"Cobertura do pacote",t:"select",fin:1,secao:"Custos da inseminação",opts:()=>[{v:"",t:"— Avulsa / sem pacote —"},...arr("compras").filter(c=>c.tipo==="Pacote de coberturas").map(c=>({v:c.id,t:`${c.descricao}${c.garanhao?" · "+c.garanhao:""}`}))],help:"Puxa o valor de cada cobertura, as paletas e o custo da paleta."},
     {k:"valorCobertura",l:"Valor da cobertura (R$)",t:"money",fin:1,help:"Com pacote: valor total ÷ nº de coberturas."},
@@ -714,7 +719,7 @@ function openForm(col,id,preset){
       const ln=(a,b,cls="")=>`<div class="ln ${cls}"><span>${a}</span><span class="num">${b}</span></div>`;
       box.innerHTML=`<span class="t">Custo deste potro</span>`+[["Cobertura",c.cobertura],[`Paletas (${numFmt(cur.paletas)} × ${money(cur.custoPaleta)})`,c.paletas],["Frete do sêmen",c.frete],["Fertilização",c.fertilizacao],["Medicamentos",c.medicamentos],["Receptora",c.receptora],[`Ultrassons (${(cur.ultrassons||[]).length})`,c.ultrassons],["Outros",c.outros]].filter(x=>x[1]).map(x=>ln(x[0],money(x[1]))).join("")+ln("Total",money(c.total),"tot")};
     calc();form.addEventListener("input",calc);form.addEventListener("change",calc);form.addEventListener("click",e=>{if(e.target.closest("[data-subdel],[data-subadd]"))setTimeout(calc,0)})}
-  if(col==="reproducao"){const pre=(campo,ped)=>{const nome=form.elements[campo].value;const g=pedDoAnimal(nome);if(!g)return;const vazio=PED_KEYS.every(([k])=>!form.elements[ped+"__"+k].value.trim());if(vazio)PED_KEYS.forEach(([k])=>{form.elements[ped+"__"+k].value=g[k]||""})};
+  if(col==="reproducao"){const pre=(campo,ped)=>{const a=animalDe(form.elements[campo].value);if(a&&a.nome!==form.elements[campo].value)form.elements[campo].value=a.nome;const g=a&&!pedVazio(a.genealogia)?a.genealogia:null;if(!g)return;const vazio=PED_KEYS.every(([k])=>!form.elements[ped+"__"+k].value.trim());if(vazio)PED_KEYS.forEach(([k])=>{form.elements[ped+"__"+k].value=g[k]||""})};
     form.elements.doadora.addEventListener("change",()=>pre("doadora","genealogiaDoadora"));form.elements.garanhao.addEventListener("change",()=>pre("garanhao","genealogiaGaranhao"));pre("doadora","genealogiaDoadora");pre("garanhao","genealogiaGaranhao")}
   if(col==="competicoes"){const upd=()=>{const cur=Object.assign({},rec,readForm(form,m.fields));let box=form.querySelector(".calc");if(!box){form.insertAdjacentHTML("beforeend",'<div class="calc"></div>');box=form.querySelector(".calc")}box.innerHTML=calcHTML(cur)};upd();form.addEventListener("input",upd);form.addEventListener("change",upd);form.addEventListener("click",e=>{if(e.target.closest("[data-subdel],[data-subadd]"))setTimeout(upd,0)})}
   const firstInput=form.querySelector("input,select,textarea");if(firstInput)setTimeout(()=>firstInput.focus(),30);
@@ -746,15 +751,25 @@ const PED_KEYS=[["p",1,1,4],["m",1,5,4],["pp",2,1,2],["pm",2,3,2],["mp",2,5,2],[
 function pedRot(k){if(k.length===1)return k==="p"?"Pai":"Mãe";const lado=k[0]==="p"?"paterno":"materno",sx=k[k.length-1]==="p";if(k.length===2)return (sx?"Avô ":"Avó ")+(sx?lado:lado.replace("o","a").replace(/o$/,"a"));return sx?"Bisavô":"Bisavó"}
 function pedHTML(g,editName){g=g||{};const com=editName?[]:ancestraisComuns(g);return `<div class="ped-wrap"><div class="ped">${PED_KEYS.map(([k,col,row,span])=>`<div class="cell g${col} ${k.endsWith("p")?"mac":"fem"}${com.includes(normNome(g[k]))?" comum":""}" style="grid-column:${col};grid-row:${row} / span ${span}"><span class="rot">${pedRot(k)}</span>${editName?`<input type="text" name="${editName}__${k}" id="${editName}__${k}" value="${esc(g[k]||"")}" placeholder="Nome / registro" aria-label="${pedRot(k)}">`:`<span class="nm${g[k]?"":" vazio"}">${esc(g[k]||"—")}</span>`}</div>`).join("")}</div></div>`}
 function pedVazio(g){return !g||PED_KEYS.every(([k])=>!g[k])}
-function pedDoAnimal(nome){const a=arr("animais").find(x=>!pedVazio(x.genealogia)&&String(x.nome).trim().toLowerCase()===String(nome||"").trim().toLowerCase());return a?a.genealogia:null}
+function nNome(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\(.*?\)/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()}
+// acha o animal cadastrado pelo nome, tolerando acentos, maiúsculas, nome abreviado ("Okane") ou parecido
+function animalDe(nome){const n=nNome(nome);if(!n)return null;const A=arr("animais");
+  let a=A.find(x=>nNome(x.nome)===n);if(a)return a;
+  let c=A.filter(x=>{const m=nNome(x.nome);return m&&(m.startsWith(n+" ")||n.startsWith(m+" "))});if(c.length===1)return c[0];
+  const w=n.split(" ")[0];if(w.length<3)return null;c=A.filter(x=>nNome(x.nome).split(" ")[0]===w);return c.length===1?c[0]:null}
+function pedDoAnimal(nome){const a=animalDe(nome);return a&&!pedVazio(a.genealogia)?a.genealogia:null}
 // genealogia do potro: pai = garanhão, mãe = doadora, e as gerações acima vêm das genealogias deles
-function pedPotro(r){const G=r.genealogiaGaranhao||pedDoAnimal(r.garanhao)||{},D=r.genealogiaDoadora||pedDoAnimal(r.doadora)||{};const o={p:r.garanhao,m:r.doadora};
+function pedPotro(r){const G=(!pedVazio(r.genealogiaGaranhao)&&r.genealogiaGaranhao)||pedDoAnimal(r.garanhao)||{},D=(!pedVazio(r.genealogiaDoadora)&&r.genealogiaDoadora)||pedDoAnimal(r.doadora)||{};const ga=animalDe(r.garanhao),da=animalDe(r.doadora);const o={p:ga?ga.nome:r.garanhao,m:da?da.nome:r.doadora};
   ["p","m","pp","pm","mp","mm"].forEach(k=>{o["p"+k]=G[k]||"";o["m"+k]=D[k]||""});return o}
 function normNome(s){return String(s||"").toLowerCase().replace(/\(.*?\)/g,"").replace(/\s+/g," ").trim()}
 function ancestraisComuns(g){const lado=pre=>PED_KEYS.filter(([k])=>k.startsWith(pre)&&g[k]).map(([k])=>normNome(g[k])).filter(Boolean);const P=new Set(lado("p")),out=[];new Set(lado("m")).forEach(n=>{if(P.has(n))out.push(n)});return out}
+function cartaoAnimal(papel,nome,fotoPropria){if(!nome)return"";const a=animalDe(nome);const f=fotoDe(nome,fotoPropria);
+  const dados=a?[a.raca,a.pelagem,a.nascimento?idade(a.nascimento):"",a.registro?"Reg. "+a.registro:""].filter(Boolean).map(esc).join(" · "):"Não encontrei este nome em Animais. Cadastre lá para puxar foto e genealogia.";
+  return `<div class="ficha-a">${f?`<img src="${esc(f)}" alt="">`:`<div class="ficha-sem" aria-hidden="true">sem foto</div>`}<div><span class="ficha-p">${esc(papel)}</span><strong>${esc(a?a.nome:nome)}</strong><div class="note">${dados}</div></div></div>`}
+function fichaPais(r){return `<div class="ficha">${cartaoAnimal("Garanhão (pai)",r.garanhao,r.fotoGaranhao)}${cartaoAnimal("Doadora (mãe)",r.doadora,r.fotoDoadora)}${r.receptora?cartaoAnimal("Receptora",r.receptora):""}</div>`}
 function abrirGenealogia(r){const g=pedPotro(r);const root=$("#modalRoot");const nome=r.nomePotro||(r.dataNascPotro?"Potro":"Futuro potro");
-  root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt" style="width:min(820px,100%)"><header><h2 id="mt">Genealogia</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
-  <div style="padding:16px 18px"><div class="ped-sub">${r.fotoPotro?`<img src="${esc(r.fotoPotro)}" alt="">`:""}<div><h3>${esc(nome)}</h3><div class="note">${esc(r.filiacao||`${r.garanhao} × ${r.doadora}`)}${r.numeroRegistro?" · Reg. "+esc(r.numeroRegistro):""}${r.dataNascPotro?" · nascido em "+dBR(r.dataNascPotro):""}</div></div></div>${pedHTML(g)}
+  root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt" style="width:min(820px,100%)"><header><h2 id="mt">Ficha da reprodução</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
+  <div style="padding:16px 18px">${fichaPais(r)}<div class="ped-sub">${r.fotoPotro?`<img src="${esc(r.fotoPotro)}" alt="">`:""}<div><h3>${esc(nome)}</h3><div class="note">${esc(r.filiacao||`${r.garanhao} × ${r.doadora}`)}${r.numeroRegistro?" · Reg. "+esc(r.numeroRegistro):""}${r.dataNascPotro?" · nascido em "+dBR(r.dataNascPotro):""}</div></div></div>${pedHTML(g)}
   ${(()=>{const comuns=ancestraisComuns(g);return comuns.length?`<div class="cons"><strong>Atenção: ancestrais em comum nos dois lados</strong> (${comuns.map(esc).join(", ")}). Isso indica parentesco entre o pai e a mãe; avalie a consanguinidade.</div>`:""})()}
   <p class="note" style="margin:12px 0 0">Os avós e bisavós vêm da genealogia preenchida para a doadora e para o garanhão, neste registro ou no cadastro deles em Animais.</p></div>
   <footer><div class="right"><button type="button" class="btn" id="mCancel">Fechar</button></div></footer></div></div>`;
@@ -976,7 +991,7 @@ V.competicoes=()=>{
     {l:"",h:x=>can("fin")?(x.lancado?`<span class="pill neutral">No financeiro</span>`:`<button type="button" class="btn small" data-complancar="${esc(x.id)}">Lançar no financeiro</button>`):""}
   ],rows,{vazio:"Nenhuma competição neste período.",foot:rs=>`<td colspan="7">Total (${rs.length})</td><td class="r num">${money(rs.reduce((s,c)=>s+compTotal(c),0))}</td><td class="r num">${money(rs.reduce((s,c)=>s+parseNum(c.premio),0))}</td><td></td>`})}`;
 };
-function fotoDe(nome,propria){if(propria)return propria;const a=arr("animais").find(x=>x.foto&&String(x.nome).trim().toLowerCase()===String(nome||"").trim().toLowerCase());return a?a.foto:""}
+function fotoDe(nome,propria){if(propria)return propria;const a=animalDe(nome);return a&&a.foto?a.foto:""}
 const thumbH=(src,alt)=>src?`<img class="thumb" src="${esc(src)}" alt="${esc(alt)}" title="${esc(alt)}" loading="lazy">`:`<span class="thumb thumb-empty" title="${esc(alt)}"></span>`;
 /* ---------- compras parceladas ---------- */
 function addMeses(iso,n){const [y,m,d]=iso.split("-").map(Number);const t=new Date(y,m-1+n,1);const ult=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(Math.min(d,ult)).padStart(2,"0")}`}
@@ -1076,7 +1091,7 @@ V.reproducao=()=>{
     {l:"Potro",h:x=>x.dataNascPotro?`${x.fotoPotro?`<img class="thumb" src="${esc(x.fotoPotro)}" alt="" style="float:left;margin-right:8px">`:""}<strong>${esc(x.nomePotro||"Sem nome")}</strong><div style="font-size:12.5px;color:var(--muted)">${dBR(x.dataNascPotro)}${x.sexoPotro?" · "+esc(x.sexoPotro):""}</div>`:"",v:x=>x.nomePotro},
     {l:"Registro / chip",h:x=>[x.numeroRegistro?"Reg. "+esc(x.numeroRegistro):"",x.chip?"Chip "+esc(x.chip):"",x.registroDefinitivo?`<span class="pill in">Definitivo</span>`:x.registroProvisorio?`<span class="pill warn">Provisório</span>`:""].filter(Boolean).join(" · ")},
     ...(can("fin")?[{l:"Custo do potro",r:1,h:x=>{const c=custoInsem(x).total;return c?`<span class="num">${money(c)}</span>`:""}}]:[]),
-    {l:"",h:x=>`<span style="display:inline-flex;gap:6px"><button type="button" class="btn small" data-ped-ver="${esc(x.id)}">Genealogia</button>${x.dataNascPotro&&!x.potroCadastrado&&can("edit")?`<button type="button" class="btn small" data-potro="${esc(x.id)}">Cadastrar potro</button>`:""}${custoInsem(x).total&&!x.lancado&&can("fin")?`<button type="button" class="btn small" data-replancar="${esc(x.id)}">Lançar custo</button>`:""}</span>`}
+    {l:"",h:x=>`<span style="display:inline-flex;gap:6px"><button type="button" class="btn small" data-ped-ver="${esc(x.id)}">Ficha e genealogia</button>${x.dataNascPotro&&!x.potroCadastrado&&can("edit")?`<button type="button" class="btn small" data-potro="${esc(x.id)}">Cadastrar potro</button>`:""}${custoInsem(x).total&&!x.lancado&&can("fin")?`<button type="button" class="btn small" data-replancar="${esc(x.id)}">Lançar custo</button>`:""}</span>`}
   ],rows,{vazio:f==="potros"?"Nenhum potro registrado ainda.":"Nenhuma cobertura em andamento."})}`;
 };
 V.custos=()=>{
@@ -1203,7 +1218,7 @@ view.addEventListener("click",async e=>{
   if(t.id==="cfgLogoDel"){S.cfg.logo="";S.cfg.semLogo=false;putCfg();render();return}
   if(t.id==="bkExport"){exportJSON();return}
   if(t.id==="bkImport"){window.__merge=false;$("#importFile").click();return}
-  if(t.id==="pendImport"&&PEND){let n=0;(PEND.animais||[]).forEach(x=>{if(x&&x.id){put("animais",Object.assign({},S.animais[x.id]||{},x));n++}});S.cfg.loteImportado=PEND.lote;S.cfg.iniciado=true;putCfg();PEND=null;render();toast(n+" animais incluídos");return}
+  if(t.id==="pendImport"&&PEND){const upd=!!PEND.titulo;let n=0;(PEND.animais||[]).forEach(x=>{if(x&&x.id){put("animais",Object.assign({},S.animais[x.id]||{},x));n++}});S.cfg.loteImportado=PEND.lote;S.cfg.iniciado=true;putCfg();PEND=null;render();toast(n+(upd?" atualização incluída":" animais incluídos"));return}
   if(t.id==="pendLater"){PEND=null;render();return}
   if(t.id==="bkMerge"){window.__merge=true;$("#importFile").click();return}
   if(t.id==="loadSample"||t.id==="wSample"){loadSample();return}
