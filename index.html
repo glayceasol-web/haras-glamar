@@ -935,6 +935,7 @@ function painelBase(){
   <div class="kpis">
     ${kp("Entradas",money(r.ent),"pos",r.aRec?`${money(r.aRec)} a receber`:"")}
     ${kp("Saídas",money(r.sai),"neg",r.aPag?`${money(r.aPag)} a pagar`:"")}
+    ${(()=>{if(UI.modo!=="mes")return"";const pa=arr("compras").reduce((t,c)=>t+parcelas(c).filter(p=>!p.paga&&(p.data||"").slice(0,7)===UI.mes).reduce((x,p)=>x+p.valor,0),0);return pa?kp("Saídas + parcelas do mês",money(r.sai+pa),"neg",`${money(pa)} em parcelas ainda não pagas`):""})()}
     ${kp("Saldo",money(r.saldo),r.saldo>=0?"pos":"neg",periodLabel())}
     ${kp("Custo de alimentação",money(r.alim),"",`${arr("alimentacao").filter(a=>inPeriod(a.data)).length} registros`)}
     ${kp("Custo médio por animal / mês",money(ativos?custoTotal/ativos/meses:0),"",`${ativos} animais ativos`)}
@@ -1253,6 +1254,14 @@ V.inseminacao=()=>{
     {l:"Situação",h:x=>{const st=statusRepro(x);return `<span class="pill ${st.cls}">${st.txt}</span>`}}
   ],rows,{vazio:"Nenhuma inseminação registrada.",foot:rs=>`<td colspan="8">Total (${rs.length})</td><td class="r num">${money(rs.reduce((s,r)=>s+custoInsem(r).total,0))}</td><td></td>`})}`;
 };
+function parcMesHTML(rs,ym,titulo){const it=[];rs.forEach(([c,r])=>r.ps.forEach(p=>{if((p.data||"").slice(0,7)===ym)it.push({c,r,p})}));if(!it.length)return"";
+  it.sort((a,b)=>a.p.data.localeCompare(b.p.data));const tot=it.reduce((s,x)=>s+x.p.valor,0),aberto=it.filter(x=>!x.p.paga).reduce((s,x)=>s+x.p.valor,0);
+  return `<section class="panel" style="margin-bottom:16px"><h2>${titulo} <small>${MESES_L[+ym.slice(5,7)-1]}/${ym.slice(0,4)}</small></h2><div class="tablewrap"><table><thead><tr><th>Vencimento</th><th>Compra</th><th>Parcela</th><th class="r">Valor</th><th>Faltam depois desta</th><th>Situação</th><th></th></tr></thead><tbody>${it.map(({c,r,p})=>{const depois=r.ps.length-p.n;const st=p.paga?["in","Paga"]:p.data<today()?["out","Atrasada"]:["warn","A vencer"];
+    return `<tr><td class="num">${dBR(p.data)}</td><td><strong>${esc(c.descricao)}</strong><div style="font-size:12.5px;color:var(--muted)">${esc(c.tipo||"")}</div></td><td class="num">${p.n}/${r.ps.length}</td><td class="r num">${money(p.valor)}</td><td>${depois?`${depois} parcela${depois>1?"s":""} · ${money(r.ps.slice(p.n).reduce((s,x)=>s+x.valor,0))}`:"<strong>última parcela</strong>"}${depois&&depois<=3?` <span class="pill warn">acabando</span>`:""}</td><td><span class="pill ${st[0]}">${st[1]}</span></td><td><button type="button" class="btn small" data-parcelas="${esc(c.id)}">Abrir</button></td></tr>`}).join("")}</tbody>
+    <tfoot><tr><td colspan="3">Total do mês (${it.length} parcela${it.length>1?"s":""})</td><td class="r num"><strong>${money(tot)}</strong></td><td colspan="3">${aberto?`falta pagar ${money(aberto)}`:"tudo pago"}</td></tr></tfoot></table></div></section>`}
+function resumoTipoHTML(rs,ym){const g={};rs.forEach(([c,r])=>{const k=c.tipo||"Outro";const o=g[k]=g[k]||{n:0,total:0,pago:0,mes:0,abertas:0};o.n++;o.total+=parseNum(c.valorTotal);o.pago+=r.pago;o.mes+=r.ps.filter(p=>(p.data||"").slice(0,7)===ym).reduce((s,p)=>s+p.valor,0);o.abertas+=r.ps.filter(p=>!p.paga).length});
+  const ks=Object.keys(g);if(!ks.length)return"";
+  return `<section class="panel" style="margin-bottom:16px"><h2>Resumo por tipo</h2><div class="tablewrap"><table><thead><tr><th>Tipo</th><th>Compras</th><th class="r">Total parcelado</th><th class="r">Já pago</th><th class="r">Falta pagar</th><th>Parcelas em aberto</th><th class="r">Parcela deste mês</th></tr></thead><tbody>${ks.sort().map(k=>{const o=g[k];return `<tr><td><strong>${esc(k)}</strong></td><td>${o.n}</td><td class="r num">${money(o.total)}</td><td class="r num">${money(o.pago)}</td><td class="r num">${money(o.total-o.pago)}</td><td>${o.abertas}</td><td class="r num">${money(o.mes)}</td></tr>`}).join("")}</tbody></table></div></section>`}
 V.compras=()=>{
   const rows=arr("compras").sort((a,b)=>String(b.dataCompra||"").localeCompare(a.dataCompra||""));
   const rs=rows.map(c=>[c,resumoCompra(c)]);
@@ -1263,6 +1272,8 @@ V.compras=()=>{
    <div class="kpi pos"><span class="lbl">Já pago</span><span class="val">${money(pago)}</span></div>
    <div class="kpi neg"><span class="lbl">Falta pagar</span><span class="val">${money(total-pago)}</span></div>
    <div class="kpi ${atras?"neg":""}"><span class="lbl">A pagar este mês</span><span class="val">${money(doMes)}</span>${atras?`<span class="hint">${atras} parcela${atras>1?"s":""} atrasada${atras>1?"s":""}</span>`:""}</div></div>
+  ${parcMesHTML(rs,mes,"Parcelas deste mês")}${parcMesHTML(rs,addMeses(mes+"-01",1).slice(0,7),"Parcelas do próximo mês")}
+  ${resumoTipoHTML(rs,mes)}
   ${toolbar("compras",`<button type="button" class="btn" data-csv="compras">Exportar planilha</button>`)}
   ${tableView("compras",[
     {l:"Compra",h:x=>`<strong>${esc(x.descricao)}</strong><div style="font-size:12.5px;color:var(--muted)">${esc(x.tipo||"")}${x.vendedor?" · "+esc(x.vendedor):""}</div>`,v:x=>x.descricao+" "+(x.vendedor||"")+" "+(x.garanhao||""),wrap:1},
@@ -1270,6 +1281,7 @@ V.compras=()=>{
     {l:"Parcelas",h:x=>{const r=resumoCompra(x);return `<span class="pill ${r.atrasadas?"out":r.pagas===r.ps.length?"in":"neutral"}">${r.pagas}/${r.ps.length} pagas</span>`}},
     {l:"Próxima",h:x=>{const r=resumoCompra(x);return r.prox?`<span class="num">${dBR(r.prox.data)}</span> <span style="color:var(--muted)" class="num">${money(r.prox.valor)}</span>`:"Quitado"}},
     {l:"Falta pagar",r:1,h:x=>`<span class="num">${money(resumoCompra(x).saldo)}</span>`},
+    {l:"Termina em",h:x=>{const r=resumoCompra(x);const ult=r.ps[r.ps.length-1];const falt=r.ps.filter(p=>!p.paga).length;return ult&&ult.data?`<span class="num">${MESES_L[+ult.data.slice(5,7)-1].slice(0,3).toLowerCase()}/${ult.data.slice(0,4)}</span>${falt&&falt<=3?` <span class="pill warn">acabando</span>`:""}`:""}},
     {l:"Coberturas",h:x=>{const r=resumoCompra(x);return x.tipo==="Pacote de coberturas"&&r.qtd?`<span class="pill ${r.usadas>=r.qtd?"neutral":"brass"}">${r.usadas}/${r.qtd} usadas</span><div style="font-size:12px;color:var(--muted)" class="num">${money(r.valorCob)} cada</div>`:""}},
     {l:"",h:x=>`<button type="button" class="btn small" data-parcelas="${esc(x.id)}">Parcelas</button>`}
   ],rows,{vazio:"Nenhuma compra cadastrada."})}`;
@@ -1443,7 +1455,7 @@ view.addEventListener("click",async e=>{
       if(backend==="supa"){const r1=await SB.from("registros").upsert({colecao:m.col,id:o.id,dados:clean(junto)});if(r1.error){erros.push("Juntar registros: "+r1.error.message);continue}const r2=await SB.from("registros").delete().eq("colecao",m.col).eq("id",m.id);if(r2.error)erros.push("Apagar duplicado: "+r2.error.message)}
       else{put(m.col,junto);del(m.col,m.id)}}
     t.textContent="Conferindo…";if(backend==="supa")await loadSupa();
-    const faltam=itens.filter(([c,x])=>!S[c][x.id]||(x.foto&&S[c][x.id].foto!==x.foto)).map(([c,x])=>x.nome||x.item||x.descricao||x.nomePotro||x.id);
+    const faltam=itens.filter(([c,x])=>!(x._parcial&&!S[c][x.id])).filter(([c,x])=>!S[c][x.id]||(x.foto&&S[c][x.id].foto!==x.foto)).map(([c,x])=>x.nome||x.item||x.descricao||x.nomePotro||x.id);
     if(erros.length||faltam.length){P.erro=(erros.length?erros.join(" · "):"Não ficaram gravados: "+faltam.join(", "));PEND=P;render();toast("Alguns itens não foram gravados. Veja o aviso no Painel.");return}
     S.cfg.loteImportado=P.lote;S.cfg.iniciado=true;putCfg();PEND=null;render();toast(itens.length+" itens gravados e conferidos");return}
   if(t.id==="pendLater"){PEND=null;render();return}
