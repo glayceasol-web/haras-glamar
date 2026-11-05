@@ -172,6 +172,14 @@ tfoot td{font-weight:700;background:var(--surface-2);border-top:2px solid var(--
 .foto-box{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .foto-prev{width:150px;aspect-ratio:4/3;max-width:100%;border-radius:10px;overflow:hidden;background:var(--surface-2);border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px}
 .foto-prev img{width:100%;height:100%;object-fit:cover}
+.thumb,.foto-prev img,.ficha-a img,.ped-sub img{object-position:50% 25%}
+.enq-back{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;color:#fff;text-align:center}
+.enq-wrap{position:relative;display:inline-block;touch-action:manipulation;cursor:crosshair;line-height:0}
+.enq-wrap img{max-width:92vw;max-height:62vh;display:block}
+.enq-sq{position:absolute;border:3px solid #ff9a3c;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;border-radius:6px}
+.enq-back input[type=range]{width:min(320px,80vw)}
+.enq-acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.enq-wrap{overflow:hidden}
 .foto-acts{display:flex;flex-direction:column;gap:6px;align-items:flex-start;flex:1 1 180px;min-width:0}
 .form-sec{grid-column:1/-1;font-size:16px;margin:8px 0 -4px;padding-top:12px;border-top:1px solid var(--line);color:var(--accent)}
 .parc{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px 12px;align-items:center;font-size:14px}
@@ -389,7 +397,7 @@ async function loadSupa(){
 }
 let PEND=null;
 function pendHTML(){if(!PEND||UI.view!=="painel")return"";const n=(PEND.animais||[]).length;const novos=(PEND.animais||[]).filter(a=>!S.animais[a.id]).length;
-  return `<div class="card" style="margin-bottom:16px;border:1px solid var(--accent)"><h3 style="margin:0 0 6px">${esc(PEND.titulo||"Cadastros prontos para entrar no sistema")}</h3><p style="margin:0 0 10px">${PEND.texto?esc(PEND.texto):`${n} animais com fotos e genealogia (${novos} novos), preparados a partir das fichas de registro.`} Confira e clique para incluir. Nada do que já está lançado é apagado.</p><p style="margin:0 0 10px;font-size:13.5px;color:var(--muted)">${[...(PEND.animais||[]).map(a=>a.nome),...(PEND.reproducao||[]).map(r=>"Reprodução: "+(r.nomePotro||r.doadora)),...(PEND.estoque||[]).map(e=>"Estoque: "+e.item),...(PEND.cocheiras||[]).map(c=>"Estrutura: "+c.nome),...(PEND.mesclar||[]).map(m=>m.rotulo||"Juntar registros repetidos"),...(PEND.lancamentos||[]).map(l=>"Saída: "+(l.descricao||l.categoria))].map(esc).join(" · ")}</p>${PEND.erro?`<p style="margin:0 0 10px;color:var(--neg,#b42318)"><strong>Erro ao gravar:</strong> ${esc(PEND.erro)}</p>`:""}<button type="button" class="btn primary" id="pendImport">${PEND.erro?"Tentar de novo":"Incluir no sistema"}</button> <button type="button" class="btn" id="pendLater">Agora não</button></div>`}
+  return `<div class="card" style="margin-bottom:16px;border:1px solid var(--accent)"><h3 style="margin:0 0 6px">${esc(PEND.titulo||"Cadastros prontos para entrar no sistema")}</h3><p style="margin:0 0 10px">${PEND.texto?esc(PEND.texto):`${n} animais com fotos e genealogia (${novos} novos), preparados a partir das fichas de registro.`} Confira e clique para incluir. Nada do que já está lançado é apagado.</p><p style="margin:0 0 10px;font-size:13.5px;color:var(--muted)">${[...(PEND.animais||[]).map(a=>a.nome||"Miniatura: "+((S.animais[a.id]||{}).nome||a.id)),...(PEND.atualizarPor||[]).map(m=>m.rotulo||"Atualizar reprodução"),...(PEND.reproducao||[]).map(r=>"Reprodução: "+(r.nomePotro||r.doadora)),...(PEND.estoque||[]).map(e=>"Estoque: "+e.item),...(PEND.cocheiras||[]).map(c=>"Estrutura: "+c.nome),...(PEND.mesclar||[]).map(m=>m.rotulo||"Juntar registros repetidos"),...(PEND.compras||[]).map(c=>"Compra: "+c.descricao),...(PEND.lancamentos||[]).map(l=>"Saída: "+(l.descricao||l.categoria))].map(esc).join(" · ")}</p>${PEND.erro?`<p style="margin:0 0 10px;color:var(--neg,#b42318)"><strong>Erro ao gravar:</strong> ${esc(PEND.erro)}</p>`:""}<button type="button" class="btn primary" id="pendImport">${PEND.erro?"Tentar de novo":"Incluir no sistema"}</button> <button type="button" class="btn" id="pendLater">Agora não</button></div>`}
 function showLogin(modo){
   let el=$("#loginBox");if(!el){el=document.createElement("div");el.id="loginBox";document.body.appendChild(el)}
   const conv=modo==="convite";if(conv)modo="nova";
@@ -628,10 +636,11 @@ const MOD={
     {k:"veterinario",l:"Veterinário",t:"text"},
     {k:"compraId",l:"Cobertura do pacote",t:"select",fin:1,secao:"Custos da inseminação",opts:()=>[{v:"",t:"— Avulsa / sem pacote —"},...arr("compras").filter(c=>c.tipo==="Pacote de coberturas").map(c=>({v:c.id,t:`${c.descricao}${c.garanhao?" · "+c.garanhao:""}`}))],help:"Puxa o valor de cada cobertura, as paletas e o custo da paleta."},
     {k:"valorCobertura",l:"Valor da cobertura (R$)",t:"money",fin:1,help:"Com pacote: valor total ÷ nº de coberturas."},
+    {k:"extrasPacote",l:"Paletas extras e frete do pacote (R$)",t:"money",fin:1,help:"Com pacote: (custo extra das paletas + frete) ÷ nº de coberturas."},
     {k:"paletas",l:"Paletas usadas",t:"number",help:"Ex.: 5 paletas por cobertura."},
     {k:"custoPaleta",l:"Custo por paleta (R$)",t:"money",fin:1,help:"Retirada / congelamento. Ex.: R$ 60."},
     {k:"freteSemen",l:"Frete / envio do sêmen (R$)",t:"money",fin:1},
-    {k:"custoFertilizacao",l:"Fertilização pela veterinária (R$)",t:"money",fin:1},
+    {k:"custoFertilizacao",l:"Coleta, inseminação / fertilização pela veterinária (R$)",t:"money",fin:1},
     {k:"custoMedicamentos",l:"Medicamentos (R$)",t:"money",fin:1,help:"Se for necessário."},
     {k:"custoReceptora",l:"Receptora (R$)",t:"money",fin:1,help:"Aluguel ou compra da receptora, se houver."},
     {k:"ultrassons",l:"Ultrassons",t:"list",full:1,fin:1,sub:[{k:"data",l:"Data",ph:"dd/mm/aaaa"},{k:"motivo",l:"Motivo",ph:"Ex.: diagnóstico 14 dias"},{k:"valor",l:"Valor (R$)",money:1,ph:"0,00"},{k:"vet",l:"Veterinário",ph:"Nome"}]},
@@ -657,6 +666,8 @@ const MOD={
     {k:"qtdCoberturas",l:"Nº de coberturas no pacote",t:"number"},
     {k:"paletasPorCobertura",l:"Paletas por cobertura",t:"number",help:"Ex.: 5"},
     {k:"custoPaleta",l:"Custo por paleta (R$)",t:"money",help:"Retirada / congelamento. Ex.: 60"},
+    {k:"extrasPaletas",l:"Custo extra das paletas (R$, total)",t:"money",help:"Valor único do pacote. É dividido entre as coberturas e entra no custo de cada potro."},
+    {k:"fretePacote",l:"Frete (R$, total)",t:"money",help:"Também é dividido entre as coberturas e entra no custo de cada potro."},
     {k:"valorTotal",l:"Valor total (R$)",t:"money",req:1},
     {k:"entrada",l:"Entrada (R$)",t:"money"},
     {k:"nParcelas",l:"Nº de parcelas",t:"number",req:1,def:"1"},
@@ -687,7 +698,7 @@ function fieldHTML(f,val,form){
   const id="f_"+f.k;const req=f.req?" required":"";const ph=f.ph?` placeholder="${esc(f.ph)}"`:"";
   let inp="";
   if(f.t==="pedigree"){return `<div class="field full" data-k="${f.k}" data-ped="${f.k}"><label>${esc(f.l)}</label>${f.help?`<span class="help">${esc(f.help)}</span>`:""}${pedHTML(val,f.k)}</div>`}
-  if(f.t==="foto"){return `<div class="field${f.full?" full":""} foto-field" data-k="${f.k}" data-foto="${f.k}"><label>${esc(f.l)}</label><div class="foto-box"><div class="foto-prev">${val?`<img src="${esc(val)}" alt="Foto do animal">`:`<span>Sem foto</span>`}</div><div class="foto-acts"><label class="btn small" for="${id}">${val?"Trocar foto":"Escolher foto"}</label><input type="file" id="${id}" accept="image/*" hidden>${val?`<button type="button" class="btn small ghost" data-fotodel>Remover</button>`:""}${f.full?`<span class="help">Do celular dá para tirar a foto na hora. A imagem é reduzida automaticamente.</span>`:""}</div></div><input type="hidden" name="${f.k}" value="${esc(val||"")}"></div>`}
+  if(f.t==="foto"){return `<div class="field${f.full?" full":""} foto-field" data-k="${f.k}" data-foto="${f.k}"><label>${esc(f.l)}</label><div class="foto-box"><div class="foto-prev">${val?`<img src="${esc((form&&form[f.k+"Mini"])||val)}" alt="Foto do animal">`:`<span>Sem foto</span>`}</div><div class="foto-acts"><label class="btn small" for="${id}">${val?"Trocar foto":"Escolher foto"}</label><input type="file" id="${id}" accept="image/*" hidden>${val?`<button type="button" class="btn small" data-fotoenq>Enquadrar cabeça</button><button type="button" class="btn small ghost" data-fotodel>Remover</button>`:""}${f.full?`<span class="help">Do celular dá para tirar a foto na hora. A imagem é reduzida automaticamente.</span>`:""}</div></div><input type="hidden" name="${f.k}" value="${esc(val||"")}"><input type="hidden" name="${f.k}Mini" value="${esc((val&&form&&form[f.k+"Mini"])||"")}"></div>`}
   if(f.t==="list"){const rows=Array.isArray(val)?val:[];
     return `<div class="field full" data-k="${f.k}" data-list="${f.k}"><label>${esc(f.l)}</label><div class="subhead">${f.sub.map(x=>`<span>${esc(x.l)}</span>`).join("")}<span></span></div><div class="sublist">${rows.map(r=>subRowHTML(f,r)).join("")}</div><div><button type="button" class="btn small" data-subadd="${f.k}">+ Adicionar item</button></div></div>`}
   if(f.t==="select"){const os=f.opts(form);const cur=val??"";let has=os.some(o=>String(o.v)===String(cur));
@@ -702,7 +713,7 @@ function fieldHTML(f,val,form){
 }
 let subSeq=0;
 function subRowHTML(f,r){r=r||{};subSeq++;return `<div class="subrow">${f.sub.map(x=>`<input type="text" data-sk="${x.k}" id="sub_${f.k}_${subSeq}_${x.k}" aria-label="${esc(x.l)}" placeholder="${esc(x.ph||x.l)}"${x.money?' inputmode="decimal"':""} value="${esc(x.money&&r[x.k]!==undefined&&r[x.k]!==""?String(r[x.k]).replace(".",","):r[x.k]??"")}">`).join("")}<button type="button" class="btn small ghost" data-subdel aria-label="Remover item">✕</button></div>`}
-function readForm(form,fields){const o={};fields.forEach(f=>{if(f.fin&&!can("fin"))return;if(f.t==="pedigree"){const g={};PED_KEYS.forEach(([k])=>{const el=form.elements[f.k+"__"+k];if(el&&el.value.trim())g[k]=el.value.trim()});o[f.k]=g;return}if(f.t==="foto"){o[f.k]=form.elements[f.k]?form.elements[f.k].value:"";return}if(f.t==="list"){const box=form.querySelector(`[data-list="${f.k}"]`);o[f.k]=box?[...box.querySelectorAll(".subrow")].map(row=>{const r={};f.sub.forEach(x=>{const v=row.querySelector(`[data-sk="${x.k}"]`).value.trim();r[x.k]=x.money?(v===""?"":parseNum(v)):v});return r}).filter(r=>f.sub.some(x=>r[x.k]!==""&&r[x.k]!==undefined)):[];return}const el=form.elements[f.k];if(!el)return;let v=el.value;if(f.t==="money"||f.t==="number")v=v.trim()===""?"":parseNum(v);else v=v.trim();o[f.k]=v});return o}
+function readForm(form,fields){const o={};fields.forEach(f=>{if(f.fin&&!can("fin"))return;if(f.t==="pedigree"){const g={};PED_KEYS.forEach(([k])=>{const el=form.elements[f.k+"__"+k];if(el&&el.value.trim())g[k]=el.value.trim()});o[f.k]=g;return}if(f.t==="foto"){o[f.k]=form.elements[f.k]?form.elements[f.k].value:"";const mm=form.elements[f.k+"Mini"];o[f.k+"Mini"]=o[f.k]&&mm?mm.value:"";return}if(f.t==="list"){const box=form.querySelector(`[data-list="${f.k}"]`);o[f.k]=box?[...box.querySelectorAll(".subrow")].map(row=>{const r={};f.sub.forEach(x=>{const v=row.querySelector(`[data-sk="${x.k}"]`).value.trim();r[x.k]=x.money?(v===""?"":parseNum(v)):v});return r}).filter(r=>f.sub.some(x=>r[x.k]!==""&&r[x.k]!==undefined)):[];return}const el=form.elements[f.k];if(!el)return;let v=el.value;if(f.t==="money"||f.t==="number")v=v.trim()===""?"":parseNum(v);else v=v.trim();o[f.k]=v});return o}
 
 function openForm(col,id,preset){
   const m=MOD[col];const rec=id?Object.assign({},S[col][id]):Object.assign({},preset||{});
@@ -719,24 +730,26 @@ function openForm(col,id,preset){
   m.fields.filter(f=>f.dependsOn).forEach(f=>{form.elements[f.dependsOn].addEventListener("change",()=>{const cur=readForm(form,m.fields);const box=form.querySelector(`[data-k="${f.k}"]`);box.outerHTML=fieldHTML(f,"",cur)})});
   if(col==="alimentacao"){form.elements.estoqueId.addEventListener("change",()=>{const e=S.estoque[form.elements.estoqueId.value];if(e){if(e.unidade)form.elements.unidade.value=e.unidade;if(!form.elements.custoUnit.value&&e.custoUnit!==undefined&&e.custoUnit!=="")form.elements.custoUnit.value=String(e.custoUnit).replace(".",",")}})}
   form.querySelectorAll("[data-foto]").forEach(box=>{const f=m.fields.find(x=>x.k===box.dataset.foto);
-    const redraw=v=>{box.outerHTML=fieldHTML(f,v,{});bindFoto()};
+    const redraw=(v,mi)=>{box.outerHTML=fieldHTML(f,v,{[f.k+"Mini"]:mi||""});bindFoto()};
     function bindFoto(){const b=form.querySelector(`[data-foto="${f.k}"]`);const inp=b.querySelector('input[type=file]');
-      inp.addEventListener("change",()=>{const file=inp.files[0];if(!file)return;resizeImg(file,900,.72).then(redraw).catch(()=>toast("Não consegui ler essa imagem. Tente JPG ou PNG."))});
-      const d=b.querySelector("[data-fotodel]");if(d)d.onclick=()=>redraw("")}
+      inp.addEventListener("change",()=>{const file=inp.files[0];if(!file)return;resizeImg(file,900,.72).then(v=>{redraw(v);abrirEnquadrar(v,mi=>redraw(v,mi))}).catch(()=>toast("Não consegui ler essa imagem. Tente JPG ou PNG."))});
+      const d=b.querySelector("[data-fotodel]");if(d)d.onclick=()=>redraw("");
+      const q=b.querySelector("[data-fotoenq]");if(q)q.onclick=()=>{const v=form.elements[f.k].value;abrirEnquadrar(v,mi=>redraw(v,mi))}}
     bindFoto()});
   form.addEventListener("click",e=>{const a=e.target.closest("[data-subadd]");if(a){const f=m.fields.find(x=>x.k===a.dataset.subadd);const box=form.querySelector(`[data-list="${f.k}"] .sublist`);box.insertAdjacentHTML("beforeend",subRowHTML(f,{}));box.lastElementChild.querySelector("input").focus();return}const d=e.target.closest("[data-subdel]");if(d)d.closest(".subrow").remove()});
   if(col==="reproducao"&&form.elements.compraId){form.elements.compraId.addEventListener("change",()=>{const c=S.compras[form.elements.compraId.value];if(!c)return;const rs=resumoCompra(c);
       if(rs.valorCob)form.elements.valorCobertura.value=String(Math.round(rs.valorCob*100)/100).replace(".",",");
+      if(rs.extraCob&&form.elements.extrasPacote)form.elements.extrasPacote.value=String(Math.round(rs.extraCob*100)/100).replace(".",",");
       if(c.paletasPorCobertura)form.elements.paletas.value=String(c.paletasPorCobertura).replace(".",",");
       if(c.custoPaleta)form.elements.custoPaleta.value=String(c.custoPaleta).replace(".",",");
       if(c.garanhao&&!form.elements.garanhao.value)form.elements.garanhao.value=c.garanhao;
       if(rs.qtd&&rs.usadas>=rs.qtd&&!id)toast(`Atenção: as ${rs.qtd} coberturas deste pacote já foram usadas`)});
     const calc=()=>{const cur=Object.assign({},rec,readForm(form,m.fields));let box=form.querySelector(".calc");if(!box){form.insertAdjacentHTML("beforeend",'<div class="calc"></div>');box=form.querySelector(".calc")}const c=custoInsem(cur);
       const ln=(a,b,cls="")=>`<div class="ln ${cls}"><span>${a}</span><span class="num">${b}</span></div>`;
-      box.innerHTML=`<span class="t">Custo deste potro</span>`+[["Cobertura",c.cobertura],[`Paletas (${numFmt(cur.paletas)} × ${money(cur.custoPaleta)})`,c.paletas],["Frete do sêmen",c.frete],["Fertilização",c.fertilizacao],["Medicamentos",c.medicamentos],["Receptora",c.receptora],[`Ultrassons (${(cur.ultrassons||[]).length})`,c.ultrassons],["Outros",c.outros]].filter(x=>x[1]).map(x=>ln(x[0],money(x[1]))).join("")+ln("Total",money(c.total),"tot")};
+      box.innerHTML=`<span class="t">Custo deste potro</span>`+[["Cobertura",c.cobertura],["Paletas extras e frete do pacote",c.pacote],[`Paletas (${numFmt(cur.paletas)} × ${money(cur.custoPaleta)})`,c.paletas],["Frete do sêmen",c.frete],["Fertilização",c.fertilizacao],["Medicamentos",c.medicamentos],["Receptora",c.receptora],[`Ultrassons (${(cur.ultrassons||[]).length})`,c.ultrassons],["Outros",c.outros]].filter(x=>x[1]).map(x=>ln(x[0],money(x[1]))).join("")+ln("Total",money(c.total),"tot")};
     calc();form.addEventListener("input",calc);form.addEventListener("change",calc);form.addEventListener("click",e=>{if(e.target.closest("[data-subdel],[data-subadd]"))setTimeout(calc,0)})}
   if(col==="reproducao"){const pre=(campo,ped)=>{const a=animalDe(form.elements[campo].value);if(a&&a.nome!==form.elements[campo].value)form.elements[campo].value=a.nome;
-    const fk=campo==="doadora"?"fotoDoadora":"fotoGaranhao";const box=form.querySelector(`[data-foto="${fk}"] .foto-prev`);if(box&&form.elements[fk]&&!form.elements[fk].value){box.innerHTML=a&&a.foto?`<img src="${esc(a.foto)}" alt=""><span class="help" style="position:absolute;left:6px;bottom:4px;background:rgba(0,0,0,.6);color:#fff;padding:1px 6px;border-radius:6px;font-size:11px">da ficha em Animais</span>`:`<span>Sem foto</span>`;box.style.position="relative"}const g=a&&!pedVazio(a.genealogia)?a.genealogia:null;if(!g)return;const vazio=PED_KEYS.every(([k])=>!form.elements[ped+"__"+k].value.trim());if(vazio)PED_KEYS.forEach(([k])=>{form.elements[ped+"__"+k].value=g[k]||""})};
+    const fk=campo==="doadora"?"fotoDoadora":"fotoGaranhao";const box=form.querySelector(`[data-foto="${fk}"] .foto-prev`);if(box&&form.elements[fk]&&!form.elements[fk].value){box.innerHTML=a&&a.foto?`<img src="${esc(mini(a.foto))}" alt=""><span class="help" style="position:absolute;left:6px;bottom:4px;background:rgba(0,0,0,.6);color:#fff;padding:1px 6px;border-radius:6px;font-size:11px">da ficha em Animais</span>`:`<span>Sem foto</span>`;box.style.position="relative"}const g=a&&!pedVazio(a.genealogia)?a.genealogia:null;if(!g)return;const vazio=PED_KEYS.every(([k])=>!form.elements[ped+"__"+k].value.trim());if(vazio)PED_KEYS.forEach(([k])=>{form.elements[ped+"__"+k].value=g[k]||""})};
     form.elements.doadora.addEventListener("change",()=>pre("doadora","genealogiaDoadora"));form.elements.garanhao.addEventListener("change",()=>pre("garanhao","genealogiaGaranhao"));pre("doadora","genealogiaDoadora");pre("garanhao","genealogiaGaranhao")}
   if(col==="competicoes"){const upd=()=>{const cur=Object.assign({},rec,readForm(form,m.fields));let box=form.querySelector(".calc");if(!box){form.insertAdjacentHTML("beforeend",'<div class="calc"></div>');box=form.querySelector(".calc")}box.innerHTML=calcHTML(cur)};upd();form.addEventListener("input",upd);form.addEventListener("change",upd);form.addEventListener("click",e=>{if(e.target.closest("[data-subdel],[data-subadd]"))setTimeout(upd,0)})}
   const firstInput=form.querySelector("input,select,textarea");if(firstInput)setTimeout(()=>firstInput.focus(),30);
@@ -782,15 +795,25 @@ function normNome(s){return String(s||"").toLowerCase().replace(/\(.*?\)/g,"").r
 function ancestraisComuns(g){const lado=pre=>PED_KEYS.filter(([k])=>k.startsWith(pre)&&g[k]).map(([k])=>normNome(g[k])).filter(Boolean);const P=new Set(lado("p")),out=[];new Set(lado("m")).forEach(n=>{if(P.has(n))out.push(n)});return out}
 function cartaoAnimal(papel,nome,fotoPropria){if(!nome)return"";const a=animalDe(nome);const f=fotoDe(nome,fotoPropria);
   const dados=a?[a.raca,a.pelagem,a.nascimento?idade(a.nascimento):"",a.registro?"Reg. "+a.registro:""].filter(Boolean).map(esc).join(" · "):"Não encontrei este nome em Animais. Cadastre lá para puxar foto e genealogia.";
-  return `<div class="ficha-a">${f?`<img src="${esc(f)}" alt="">`:`<div class="ficha-sem" aria-hidden="true">sem foto</div>`}<div><span class="ficha-p">${esc(papel)}</span><strong>${esc(a?a.nome:nome)}</strong><div class="note">${dados}</div></div></div>`}
+  return `<div class="ficha-a">${f?`<img src="${esc(mini(f))}" alt="">`:`<div class="ficha-sem" aria-hidden="true">sem foto</div>`}<div><span class="ficha-p">${esc(papel)}</span><strong>${esc(a?a.nome:nome)}</strong><div class="note">${dados}</div></div></div>`}
 function fichaPais(r){return `<div class="ficha">${cartaoAnimal("Garanhão (pai)",r.garanhao,r.fotoGaranhao)}${cartaoAnimal("Doadora (mãe)",r.doadora,r.fotoDoadora)}${r.receptora?cartaoAnimal("Receptora",r.receptora):""}</div>`}
 function abrirGenealogia(r){const g=pedPotro(r);const root=$("#modalRoot");const nome=r.nomePotro||(r.dataNascPotro?"Potro":"Futuro potro");
   root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt" style="width:min(820px,100%)"><header><h2 id="mt">Ficha da reprodução</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
-  <div style="padding:16px 18px">${fichaPais(r)}<div class="ped-sub">${(r.nomePotro&&fotoDe(r.nomePotro,r.fotoPotro))||r.fotoPotro?`<img src="${esc(fotoDe(r.nomePotro,r.fotoPotro))}" alt="">`:""}<div><h3>${esc(nome)}</h3><div class="note">${esc(r.filiacao||`${g.p} × ${g.m}`)}${r.numeroRegistro?" · Reg. "+esc(r.numeroRegistro):""}${r.dataNascPotro?" · nascido em "+dBR(r.dataNascPotro):""}</div></div></div>${pedHTML(g)}
+  <div style="padding:16px 18px">${fichaPais(r)}<div class="ped-sub">${(r.nomePotro&&fotoDe(r.nomePotro,r.fotoPotro))||r.fotoPotro?`<img src="${esc(mini(fotoDe(r.nomePotro,r.fotoPotro)))}" alt="">`:""}<div><h3>${esc(nome)}</h3><div class="note">${esc(r.filiacao||`${g.p} × ${g.m}`)}${r.numeroRegistro?" · Reg. "+esc(r.numeroRegistro):""}${r.dataNascPotro?" · nascido em "+dBR(r.dataNascPotro):""}</div></div></div>${pedHTML(g)}
   ${(()=>{const comuns=ancestraisComuns(g);return comuns.length?`<div class="cons"><strong>Atenção: ancestrais em comum nos dois lados</strong> (${comuns.map(esc).join(", ")}). Isso indica parentesco entre o pai e a mãe; avalie a consanguinidade.</div>`:""})()}
   <p class="note" style="margin:12px 0 0">Os avós e bisavós vêm da genealogia preenchida para a doadora e para o garanhão, neste registro ou no cadastro deles em Animais.</p></div>
   <footer><div class="right"><button type="button" class="btn" id="mCancel">Fechar</button></div></footer></div></div>`;
   const close=()=>{root.innerHTML=""};$("#mClose").onclick=close;$("#mCancel").onclick=close;$("#mb").addEventListener("mousedown",e=>{if(e.target.id==="mb")close()})}
+function abrirEnquadrar(src,cb){if(!src)return;const d=document.createElement("div");d.className="enq-back";d.setAttribute("role","dialog");d.setAttribute("aria-modal","true");
+  d.innerHTML=`<strong style="font-size:17px">Toque na cabeça do animal</strong><span style="font-size:13px;opacity:.85">A miniatura das listas vai mostrar só o quadrado laranja.</span><div class="enq-wrap"><img alt="Foto para enquadrar"><div class="enq-sq"></div></div><label style="font-size:13px">Zoom <input type="range" min="15" max="100" value="40"></label><div class="enq-acts"><button type="button" class="btn primary" data-ok>Salvar miniatura</button><button type="button" class="btn ghost" data-no style="color:#fff">Cancelar</button></div>`;
+  document.body.appendChild(d);const img=d.querySelector("img"),sq=d.querySelector(".enq-sq"),rg=d.querySelector("input");let cx=.5,cy=.3;
+  const box=()=>{const W=img.naturalWidth,H=img.naturalHeight;const side=Math.min(W,H)*rg.value/100;let x=cx*W-side/2,y=cy*H-side/2;x=Math.max(0,Math.min(W-side,x));y=Math.max(0,Math.min(H-side,y));return{x,y,side,W,H}};
+  const draw=()=>{if(!img.naturalWidth)return;const b=box(),k=img.clientWidth/b.W;Object.assign(sq.style,{left:b.x*k+"px",top:b.y*k+"px",width:b.side*k+"px",height:b.side*k+"px"})};
+  img.onload=draw;img.src=src;rg.oninput=draw;window.addEventListener("resize",draw);
+  img.addEventListener("click",e=>{const r=img.getBoundingClientRect();cx=(e.clientX-r.left)/r.width;cy=(e.clientY-r.top)/r.height;draw()});
+  const fim=()=>{window.removeEventListener("resize",draw);d.remove()};
+  d.querySelector("[data-no]").onclick=fim;
+  d.querySelector("[data-ok]").onclick=()=>{const b=box();const c=document.createElement("canvas");c.width=c.height=240;c.getContext("2d").drawImage(img,b.x,b.y,b.side,b.side,0,0,240,240);const u=c.toDataURL("image/jpeg",.8);fim();cb(u)}}
 function resizeImg(file,max,q){return new Promise((ok,err)=>{const rd=new FileReader();rd.onerror=err;rd.onload=()=>{const img=new Image();img.onerror=err;img.onload=()=>{const k=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext("2d").drawImage(img,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",q))};img.src=rd.result};rd.readAsDataURL(file)})}
 /* ---------- tabela genérica ---------- */
 function tableView(col,cols,rows,opts={}){
@@ -932,7 +955,7 @@ V.animais=()=>{
     <div class="kpi"><span class="lbl">Hospedados</span><span class="val">${hosp.length}</span><span class="hint">${money(hosp.reduce((s,a)=>s+parseNum(a.mensalidade),0))} em mensalidades</span></div></div>
   ${toolbar("animais",`<button type="button" class="btn" data-csv="animais">Exportar planilha</button>`)}
   ${tableView("animais",[
-    {l:"",h:x=>x.foto?`<img class="thumb" src="${esc(x.foto)}" alt="" loading="lazy">`:`<span class="thumb thumb-empty" aria-hidden="true"></span>`},
+    {l:"",h:x=>x.foto?`<img class="thumb" src="${esc(mini(x.foto))}" alt="" loading="lazy">`:`<span class="thumb thumb-empty" aria-hidden="true"></span>`},
     {l:"Nome",h:x=>`<strong>${esc(x.nome)}</strong>${x.apelido?`<div style="font-size:12.5px;color:var(--muted)">“${esc(x.apelido)}”</div>`:""}`,v:x=>x.nome+" "+(x.apelido||"")},{l:"Categoria",h:x=>`<span class="pill ${x.categoria==="Hospedado"?"brass":"neutral"}">${esc(x.categoria||"")}</span>`},
     {l:"Raça",k:"raca"},{l:"Sexo",k:"sexo"},{l:"Idade",v:x=>idade(x.nascimento)},{l:"Cocheira",v:x=>cocheiraNome(x.cocheira)},{l:"Proprietário",k:"proprietario"},
     {l:"Mensalidade",r:1,h:x=>x.mensalidade?`<span class="num">${money(x.mensalidade)}</span>`:""},
@@ -1043,15 +1066,18 @@ V.competicoes=()=>{
     {l:"",h:x=>can("fin")?(x.lancado?`<span class="pill neutral">No financeiro</span>`:`<button type="button" class="btn small" data-complancar="${esc(x.id)}">Lançar no financeiro</button>`):""}
   ],rows,{vazio:"Nenhuma competição neste período.",foot:rs=>`<td colspan="7">Total (${rs.length})</td><td class="r num">${money(rs.reduce((s,c)=>s+compTotal(c),0))}</td><td class="r num">${money(rs.reduce((s,c)=>s+parseNum(c.premio),0))}</td><td></td>`})}`;
 };
+let MINI=new Map();
+function buildMini(){MINI=new Map();COLS.forEach(c=>Object.values(S[c]||{}).forEach(r=>{for(const k in r){if(k.endsWith("Mini")&&r[k]&&r[k.slice(0,-4)])MINI.set(r[k.slice(0,-4)],r[k])}}))}
+const mini=src=>(src&&MINI.get(src))||src;
 function fotoDe(nome,propria){if(propria)return propria;const a=animalDe(nome);return a&&a.foto?a.foto:""}
-const thumbH=(src,alt)=>src?`<img class="thumb" src="${esc(src)}" alt="${esc(alt)}" title="${esc(alt)}" loading="lazy">`:`<span class="thumb thumb-empty" title="${esc(alt)}"></span>`;
+const thumbH=(src,alt)=>src?`<img class="thumb" src="${esc(mini(src))}" alt="${esc(alt)}" title="${esc(alt)}" loading="lazy">`:`<span class="thumb thumb-empty" title="${esc(alt)}"></span>`;
 /* ---------- compras parceladas ---------- */
 function addMeses(iso,n){const [y,m,d]=iso.split("-").map(Number);const t=new Date(y,m-1+n,1);const ult=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(Math.min(d,ult)).padStart(2,"0")}`}
 function parcelas(c){const n=Math.max(1,Math.round(parseNum(c.nParcelas)||1));const base=parseNum(c.valorTotal)-parseNum(c.entrada);const v=Math.round(base/n*100)/100;const pagas=new Set(c.pagas||[]);
   return Array.from({length:n},(_,i)=>({n:i+1,data:c.primeiraParcela?addMeses(c.primeiraParcela,i):"",valor:i===n-1?Math.round((base-v*(n-1))*100)/100:v,paga:pagas.has(i+1)}))}
 function resumoCompra(c){const ps=parcelas(c);const pago=parseNum(c.entrada)+ps.filter(p=>p.paga).reduce((s,p)=>s+p.valor,0);const prox=ps.find(p=>!p.paga);
   const usadas=arr("reproducao").filter(r=>r.compraId===c.id).length;const q=parseNum(c.qtdCoberturas);
-  return{ps,pago,saldo:parseNum(c.valorTotal)-pago,prox,pagas:ps.filter(p=>p.paga).length,usadas,qtd:q,valorCob:q?parseNum(c.valorTotal)/q:0,atrasadas:ps.filter(p=>!p.paga&&p.data&&p.data<today()).length}}
+  return{ps,pago,saldo:parseNum(c.valorTotal)-pago,prox,pagas:ps.filter(p=>p.paga).length,usadas,qtd:q,valorCob:q?parseNum(c.valorTotal)/q:0,extraCob:q?(parseNum(c.extrasPaletas)+parseNum(c.fretePacote))/q:0,extras:parseNum(c.extrasPaletas)+parseNum(c.fretePacote),atrasadas:ps.filter(p=>!p.paga&&p.data&&p.data<today()).length}}
 function abrirParcelas(id){const c=S.compras[id];const r=resumoCompra(c);const root=$("#modalRoot");const fin=can("fin");
   root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><header><h2 id="mt">Parcelas · ${esc(c.descricao)}</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
   <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
@@ -1067,7 +1093,7 @@ function abrirParcelas(id){const c=S.compras[id];const r=resumoCompra(c);const r
 }
 /* ---------- custo da inseminação ---------- */
 function custoInsem(r){const ult=(r.ultrassons||[]).reduce((s,u)=>s+parseNum(u.valor),0);
-  const partes={cobertura:parseNum(r.valorCobertura),paletas:parseNum(r.paletas)*parseNum(r.custoPaleta),frete:parseNum(r.freteSemen),fertilizacao:parseNum(r.custoFertilizacao),medicamentos:parseNum(r.custoMedicamentos),receptora:parseNum(r.custoReceptora),ultrassons:ult,outros:parseNum(r.custo)};
+  const partes={cobertura:parseNum(r.valorCobertura),pacote:parseNum(r.extrasPacote),paletas:parseNum(r.paletas)*parseNum(r.custoPaleta),frete:parseNum(r.freteSemen),fertilizacao:parseNum(r.custoFertilizacao),medicamentos:parseNum(r.custoMedicamentos),receptora:parseNum(r.custoReceptora),ultrassons:ult,outros:parseNum(r.custo)};
   partes.total=Object.values(partes).reduce((a,b)=>a+b,0);return partes}
 function partoPrevisto(r){return r.dataInseminacao?addDias(r.dataInseminacao,340):""}
 function statusRepro(r){
@@ -1090,7 +1116,7 @@ V.inseminacao=()=>{
     {l:"Data",h:x=>`<span class="num">${dBR(x.dataInseminacao)}</span>`,v:x=>dBR(x.dataInseminacao)},
     {l:"",h:x=>`<span style="display:inline-flex;gap:4px">${thumbH(fotoDe(x.doadora,x.fotoDoadora),x.doadora)}${thumbH(fotoDe(x.garanhao,x.fotoGaranhao),x.garanhao)}</span>`},
     {l:"Doadora × Garanhão",h:x=>`<strong>${esc((animalDe(x.doadora)||{}).nome||x.doadora)}</strong> × ${esc((animalDe(x.garanhao)||{}).nome||x.garanhao)}${x.compraId&&S.compras[x.compraId]?`<div style="font-size:12.5px;color:var(--muted)">${esc(S.compras[x.compraId].descricao)}</div>`:""}`,v:x=>x.doadora+" "+x.garanhao,wrap:1},
-    {l:"Cobertura",r:1,h:x=>`<span class="num">${money(custoInsem(x).cobertura)}</span>`},
+    {l:"Cobertura",r:1,h:x=>{const c=custoInsem(x);return `<span class="num">${money(c.cobertura+c.pacote)}</span>${c.pacote?`<div style="font-size:12px;color:var(--muted)">com paletas extras e frete</div>`:""}`}},
     {l:"Paletas",r:1,h:x=>`<span class="num">${money(custoInsem(x).paletas)}</span>${x.paletas?`<div style="font-size:12px;color:var(--muted)" class="num">${numFmt(x.paletas)} × ${money(x.custoPaleta)}</div>`:""}`},
     {l:"Vet. / medic.",r:1,h:x=>{const c=custoInsem(x);return `<span class="num">${money(c.fertilizacao+c.medicamentos)}</span>`}},
     {l:"Ultrassons",r:1,h:x=>`<span class="num">${money(custoInsem(x).ultrassons)}</span>${(x.ultrassons||[]).length?`<div style="font-size:12px;color:var(--muted)">${x.ultrassons.length} exame${x.ultrassons.length>1?"s":""}</div>`:""}`},
@@ -1141,7 +1167,7 @@ V.reproducao=()=>{
     {l:"Doadora × Garanhão",h:x=>`<strong>${esc((animalDe(x.doadora)||{}).nome||x.doadora)}</strong> × ${esc((animalDe(x.garanhao)||{}).nome||x.garanhao)}${x.receptora?`<div style="font-size:12.5px;color:var(--muted)">Receptora: ${esc(x.receptora)}</div>`:""}`,v:x=>x.doadora+" "+x.garanhao+" "+(x.receptora||""),wrap:1},
     {l:"Situação",h:x=>{const st=statusRepro(x);return `<span class="pill ${st.cls}">${st.txt}</span>`}},
     {l:"Parto previsto",h:x=>x.dataNascPotro?"":`<span class="num">${dBR(partoPrevisto(x))}</span>`},
-    {l:"Potro",h:x=>x.dataNascPotro?`${fotoDe(x.nomePotro,x.fotoPotro)?`<img class="thumb" src="${esc(fotoDe(x.nomePotro,x.fotoPotro))}" alt="" style="float:left;margin-right:8px">`:""}<strong>${esc(x.nomePotro||"Sem nome")}</strong><div style="font-size:12.5px;color:var(--muted)">${dBR(x.dataNascPotro)}${x.sexoPotro?" · "+esc(x.sexoPotro):""}</div>`:"",v:x=>x.nomePotro},
+    {l:"Potro",h:x=>x.dataNascPotro?`${fotoDe(x.nomePotro,x.fotoPotro)?`<img class="thumb" src="${esc(mini(fotoDe(x.nomePotro,x.fotoPotro)))}" alt="" style="float:left;margin-right:8px">`:""}<strong>${esc(x.nomePotro||"Sem nome")}</strong><div style="font-size:12.5px;color:var(--muted)">${dBR(x.dataNascPotro)}${x.sexoPotro?" · "+esc(x.sexoPotro):""}</div>`:"",v:x=>x.nomePotro},
     {l:"Registro / chip",h:x=>[x.numeroRegistro?"Reg. "+esc(x.numeroRegistro):"",x.chip?"Chip "+esc(x.chip):"",x.registroDefinitivo?`<span class="pill in">Definitivo</span>`:x.registroProvisorio?`<span class="pill warn">Provisório</span>`:""].filter(Boolean).join(" · ")},
     ...(can("fin")?[{l:"Custo do potro",r:1,h:x=>{const c=custoInsem(x).total;return c?`<span class="num">${money(c)}</span>`:""}}]:[]),
     {l:"",h:x=>`<span style="display:inline-flex;gap:6px"><button type="button" class="btn small" data-ped-ver="${esc(x.id)}">Ficha e genealogia</button>${x.dataNascPotro&&!x.potroCadastrado&&can("edit")?`<button type="button" class="btn small" data-potro="${esc(x.id)}">Cadastrar potro</button>`:""}${custoInsem(x).total&&!x.lancado&&can("fin")?`<button type="button" class="btn small" data-replancar="${esc(x.id)}">Lançar custo</button>`:""}</span>`}
@@ -1206,6 +1232,7 @@ function welcome(){
 
 /* ---------- render ---------- */
 function render(){
+  buildMini();
   renderBrand();renderNav();renderPeriod();
   const t=VIEWS.find(v=>v[0]===UI.view)||VIEWS[0];
   $("#viewTitle").textContent=t[1];
@@ -1253,7 +1280,7 @@ view.addEventListener("click",async e=>{
     put("animais",{id:aid,nome:r.nomePotro||("Potro de "+r.doadora),categoria:"Próprio",sexo:r.sexoPotro||"",nascimento:r.dataNascPotro,pelagem:r.pelagemPotro||"",registro:[r.numeroRegistro,r.chip?"chip "+r.chip:""].filter(Boolean).join(" · "),status:"Ativo",foto:r.fotoPotro||"",genealogia:pedPotro(r),obs:"Filiação: "+(r.filiacao||`${r.garanhao} × ${r.doadora}`),atualizado:new Date().toISOString()});
     put("reproducao",Object.assign({},r,{potroCadastrado:aid}));render();toast("Potro cadastrado em Animais");return}
   const rl=t.closest("[data-replancar]");if(rl){const r=S.reproducao[rl.dataset.replancar];put("reproducao",Object.assign({},r,{lancado:true}));
-    const ci=custoInsem(r);openForm("lancamentos",null,{tipo:"Saída",data:r.dataInseminacao,valor:Math.round((ci.total-(r.compraId?ci.cobertura:0))*100)/100,descricao:`Inseminação ${r.doadora} × ${r.garanhao}${r.compraId?" (sem o valor da cobertura, que já está nas parcelas)":""}`,categoria:L("saida").includes("Reprodução")?"Reprodução":"",situacao:"Pago"});return}
+    const ci=custoInsem(r);openForm("lancamentos",null,{tipo:"Saída",data:r.dataInseminacao,valor:Math.round((ci.total-(r.compraId?ci.cobertura+ci.pacote:0))*100)/100,descricao:`Inseminação ${r.doadora} × ${r.garanhao}${r.compraId?" (sem o valor da cobertura, que já está nas parcelas)":""}`,categoria:L("saida").includes("Reprodução")?"Reprodução":"",situacao:"Pago"});return}
   const cz=t.closest("[data-cascolancar]");if(cz){const c=S.cascos[cz.dataset.cascolancar];put("cascos",Object.assign({},c,{lancado:true}));openForm("lancamentos",null,{tipo:"Saída",data:c.data,valor:parseNum(c.valor),animal:c.animal,descricao:`${c.servico||"Ferrageamento"} · ${animalNome(c.animal)}${c.ferrador?" · "+c.ferrador:""}`,categoria:L("saida").includes("Ferrageamento")?"Ferrageamento":"",situacao:"Pago"});return}
   const cp=t.closest("[data-compra]");if(cp){openCompra(cp.dataset.compra);return}
   const cl=t.closest("[data-complancar]");if(cl){const c=S.competicoes[cl.dataset.complancar];const desc=`Competição ${c.evento||""} · ${animalNome(c.animal)}`.trim();
@@ -1273,9 +1300,11 @@ view.addEventListener("click",async e=>{
   if(t.id==="bkExport"){exportJSON();return}
   if(t.id==="bkImport"){window.__merge=false;$("#importFile").click();return}
   if(t.id==="pendImport"&&PEND){const P=PEND;t.disabled=true;t.textContent="Gravando…";const itens=[];COLS.forEach(c=>(P[c]||[]).forEach(x=>{if(x&&x.id)itens.push([c,x])}));const erros=[];
-    for(const [c,x] of itens){const obj=clean(Object.assign({},S[c][x.id]||{},x));
+    for(const [c,x] of itens){if(x._parcial&&!S[c][x.id])continue;const obj=clean(Object.assign({},S[c][x.id]||{},x));delete obj._parcial;
       if(backend==="supa"){let r;for(let tent=0;tent<4;tent++){try{r=await SB.from("registros").upsert({colecao:c,id:obj.id,dados:obj})}catch(e){r={error:e}}if(!r.error)break;t.textContent=`Gravando… (nova tentativa ${tent+1})`;await new Promise(ok=>setTimeout(ok,1500*(tent+1)))}
         if(r.error){const m=String(r.error.message||r.error);erros.push(`${x.nome||x.item||x.descricao||x.nomePotro||obj.id}: ${/fetch|network|Load failed/i.test(m)?"sem conexão com o banco":m}`)}else S[c][obj.id]=obj}else put(c,obj)}
+    for(const m of (P.atualizarPor||[])){const alvo=arr(m.col).filter(r=>Object.keys(m.match).every(k=>{const a1=animalDe(r[k]),a2=animalDe(m.match[k]);return a1&&a2?a1.id===a2.id:nNome(r[k]||"")===nNome(m.match[k])}));
+      for(const r0 of alvo){const obj=clean(Object.assign({},r0,m.dados));if(backend==="supa"){let r;for(let tent=0;tent<4;tent++){try{r=await SB.from("registros").upsert({colecao:m.col,id:obj.id,dados:obj})}catch(e){r={error:e}}if(!r.error)break;await new Promise(ok=>setTimeout(ok,1500*(tent+1)))}if(r.error)erros.push(`${obj.nomePotro||obj.id}: ${String(r.error.message||r.error)}`);else S[m.col][obj.id]=obj}else put(m.col,obj)}}
     for(const m of (P.mesclar||[])){const mine=S[m.col]&&S[m.col][m.id];if(!mine)continue;const ida=r=>[(animalDe(r.doadora)||{}).id||nNome(r.doadora),(animalDe(r.garanhao)||{}).id||nNome(r.garanhao)].join("|");
       const outros=arr(m.col).filter(r=>r.id!==m.id&&ida(r)===ida(mine));if(outros.length!==1)continue;const o=outros[0];const junto=Object.assign({},o);
       Object.keys(mine).forEach(k=>{if(["id","obs","dataInseminacao","atualizado"].includes(k))return;const v=o[k];if(v===undefined||v===null||v===""||(typeof v==="object"&&!Array.isArray(v)&&pedVazio(v)))junto[k]=mine[k]});
