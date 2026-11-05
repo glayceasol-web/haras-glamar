@@ -7,8 +7,11 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="CTE GLAMAR">
-<link rel="icon" href="logo.jpg">
-<link rel="apple-touch-icon" href="logo.jpg">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -1406,5 +1409,14 @@ initStore();
 })();
 </script>
 
+<button type="button" id="pwaInstall" hidden style="position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9999;background:#e8742a;color:#111;border:0;border-radius:999px;padding:11px 18px;font:600 15px system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.35)">⬇ Instalar app</button>
+<script>
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+(function(){let ev=null;const b=document.getElementById("pwaInstall");
+  const inst=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();ev=e;if(!inst)b.hidden=false});
+  b.addEventListener("click",async()=>{if(!ev)return;ev.prompt();await ev.userChoice;ev=null;b.hidden=true});
+  window.addEventListener("appinstalled",()=>{b.hidden=true});})();
+</script>
 </body>
 </html>
