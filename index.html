@@ -377,7 +377,11 @@ async function loadSupa(){
   all.forEach(r=>{if(r.colecao==="config"&&r.id==="geral")S.cfg=mergeCfg(r.dados);else if(S[r.colecao])S[r.colecao][r.id]=Object.assign({},r.dados,{id:r.id})});
   if(can("cfg")){const p=await SB.from("perfis").select("*").order("criado");PERFIS=p.data||[]}
   UI.loaded=true;setSync("ok","Salvo na nuvem");render();
+  if(can("cfg")&&!window.__pendChk){window.__pendChk=1;try{const r=await fetch("cadastros-pendentes.json",{cache:"no-store"});if(r.ok){const o=await r.json();if(o&&o.lote&&S.cfg.loteImportado!==o.lote){PEND=o;render()}}}catch(e){}}
 }
+let PEND=null;
+function pendHTML(){if(!PEND||UI.view!=="painel")return"";const n=(PEND.animais||[]).length;const novos=(PEND.animais||[]).filter(a=>!S.animais[a.id]).length;
+  return `<div class="card" style="margin-bottom:16px;border:1px solid var(--accent)"><h3 style="margin:0 0 6px">Cadastros prontos para entrar no sistema</h3><p style="margin:0 0 10px">${n} animais com fotos e genealogia (${novos} novos), preparados a partir das fichas de registro. Confira e clique para incluir. Nada do que já está lançado é apagado.</p><p style="margin:0 0 10px;font-size:13.5px;color:var(--muted)">${(PEND.animais||[]).map(a=>esc(a.nome)).join(" · ")}</p><button type="button" class="btn primary" id="pendImport">Incluir no sistema</button> <button type="button" class="btn" id="pendLater">Agora não</button></div>`}
 function showLogin(modo){
   let el=$("#loginBox");if(!el){el=document.createElement("div");el.id="loginBox";document.body.appendChild(el)}
   const conv=modo==="convite";if(conv)modo="nova";
@@ -1137,15 +1141,15 @@ function render(){
   renderBrand();renderNav();renderPeriod();
   const t=VIEWS.find(v=>v[0]===UI.view)||VIEWS[0];
   $("#viewTitle").textContent=t[1];
-  $("#viewEyebrow").textContent=["animais","cocheiras","estoque","configuracoes","tarefas","reproducao","inseminacao","compras"].includes(UI.view)?S.cfg.nome:periodLabel();
+  $("#viewEyebrow").textContent=["animais","cocheiras","estoque","configuracoes","tarefas","reproducao","inseminacao","compras"].includes(UI.view)?nomeCTE():periodLabel();
   $("#periodBox").style.visibility=["animais","estoque","configuracoes","tarefas","reproducao","inseminacao","compras"].includes(UI.view)?"hidden":"visible";
   if(UI.view==="cocheiras")$("#periodBox").style.visibility="visible";
   const act=document.activeElement;const focusId=act&&act.id;const selS=act&&act.selectionStart;
   const v=$("#view");
   if(!UI.loaded){v.innerHTML=`<p class="empty">Carregando os dados do CTE…</p>`;return}
   const vazio=COLS.every(c=>!Object.keys(S[c]).length);
-  if(vazio&&!S.cfg.iniciado&&UI.view==="painel"&&ROLE==="admin"){v.innerHTML=welcome();return}
-  v.innerHTML=(V[UI.view]||V.painel)();
+  if(vazio&&!S.cfg.iniciado&&UI.view==="painel"&&ROLE==="admin"&&!PEND){v.innerHTML=welcome();return}
+  v.innerHTML=pendHTML()+(V[UI.view]||V.painel)();
   $("#periodBox").querySelector(".status-note").style.visibility="visible";
   if(focusId){const el=document.getElementById(focusId);if(el&&el!==act){el.focus();try{if(selS!=null)el.setSelectionRange(selS,selS)}catch(e){}}}
 }
@@ -1199,6 +1203,8 @@ view.addEventListener("click",async e=>{
   if(t.id==="cfgLogoDel"){S.cfg.logo="";S.cfg.semLogo=false;putCfg();render();return}
   if(t.id==="bkExport"){exportJSON();return}
   if(t.id==="bkImport"){window.__merge=false;$("#importFile").click();return}
+  if(t.id==="pendImport"&&PEND){let n=0;(PEND.animais||[]).forEach(x=>{if(x&&x.id){put("animais",Object.assign({},S.animais[x.id]||{},x));n++}});S.cfg.loteImportado=PEND.lote;S.cfg.iniciado=true;putCfg();PEND=null;render();toast(n+" animais incluídos");return}
+  if(t.id==="pendLater"){PEND=null;render();return}
   if(t.id==="bkMerge"){window.__merge=true;$("#importFile").click();return}
   if(t.id==="loadSample"||t.id==="wSample"){loadSample();return}
   if(t.id==="wEmpty"){S.cfg.iniciado=true;putCfg();location.hash="#animais";go();toast("Comece cadastrando seus animais e cocheiras");return}
