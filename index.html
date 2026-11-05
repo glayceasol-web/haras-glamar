@@ -480,7 +480,7 @@ function consumoDia(e){
   return q>0?{v:q/30,fonte:"média das baixas (30 dias)"}:{v:0,fonte:""}}
 function previsao(e){
   const c=consumoDia(e);const qtd=parseNum(e.quantidade);const prazo=parseNum(e.prazoEntrega),marg=parseNum(e.margem),cob=parseNum(e.cobertura)||30;
-  const abaixoMin=e.minimo!==""&&e.minimo!==undefined&&qtd<=parseNum(e.minimo);
+  const abaixoMin=e.minimo!==""&&e.minimo!==undefined&&qtd<parseNum(e.minimo);
   if(!c.v)return{c,semConsumo:true,abaixoMin,diasAtePedir:abaixoMin?0:Infinity};
   const dias=qtd/c.v;const ate=dias-prazo-marg;
   const sug=Math.max(0,Math.ceil(c.v*(prazo+cob+marg)-qtd));
