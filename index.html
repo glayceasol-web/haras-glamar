@@ -567,6 +567,7 @@ const MOD={
     {k:"mensalidade",l:"Mensalidade de hospedagem (R$)",t:"money",help:"Usada no botão “Gerar mensalidades”."},
     {k:"entradaData",l:"Data de entrada no CTE",t:"date"},
     {k:"status",l:"Status",t:"select",opts:opt(()=>["Ativo","Inativo"]),def:"Ativo",help:"Só animais ativos entram no rateio."},
+    {k:"publicarSite",l:"Mostrar no site público",t:"select",opts:opt(()=>["Sim","Não"]),def:"Sim",help:"O site mostra só animais próprios, ativos e com registro."},
     {k:"genealogia",l:"Genealogia",t:"pedigree",help:"Pai, mãe, avós e bisavós. Usada automaticamente na reprodução e na genealogia dos potros."},
     {k:"obs",l:"Observações",t:"textarea",full:1}]},
   cocheiras:{titulo:"Cocheiras e estrutura",singular:"cocheira",fields:[
@@ -597,6 +598,8 @@ const MOD={
     {k:"evento",l:"Evento / prova",t:"text",ph:"Nome da competição"},
     {k:"local",l:"Local",t:"text",ph:"Cidade / parque de exposições"},
     {k:"dataCompeticao",l:"Data da competição",t:"date",req:1},
+    {k:"folder",l:"Folder da competição",t:"foto"},
+    {k:"publicarSite",l:"Mostrar no site público",t:"select",opts:opt(()=>["Sim","Não"]),def:"Sim",help:"O site mostra data, local, evento, categoria e resultado. Nunca os custos nem o prêmio."},
     {k:"dataInicioPrep",l:"Início da preparação",t:"date",help:"Do início do preparo até a prova, o sistema soma o que o animal gastou a mais (alimento, suplemento, medicamento, soro…)."},
     {k:"taxa",l:"Taxa de inscrição (R$)",t:"money"},
     {k:"deslocamento",l:"Deslocamento (R$)",t:"money",help:"Transporte, combustível, pedágio, hospedagem."},
