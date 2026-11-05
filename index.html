@@ -921,7 +921,7 @@ function renderPeriod(){document.querySelectorAll(".seg button").forEach(b=>b.se
 const V={};
 V.painel=()=>sanitAlerta()+painelBase();
 function painelBase(){
-  if(!can("fin"))return painelOperacional();
+  const fin=can("fin");
   const r=resumoFin();const ativos=animaisAtivos().length;
   const pedidos=arr("estoque").map(e=>({e,s:statusPedido(e)})).filter(x=>!x.s.p.semConsumo||x.s.p.abaixoMin).sort((a,b)=>a.s.p.diasAtePedir-b.s.p.diasAtePedir);
   const pend=arr("tarefas").filter(t=>t.status!=="Feita").sort((a,b)=>String(a.data).localeCompare(b.data));
@@ -931,23 +931,24 @@ function painelBase(){
   // saídas por categoria
   const porCat={};arr("lancamentos").filter(l=>inPeriod(l.data)&&l.tipo!=="Entrada").forEach(l=>porCat[l.categoria||"Sem categoria"]=(porCat[l.categoria||"Sem categoria"]||0)+parseNum(l.valor));
   const cats=Object.entries(porCat).sort((a,b)=>b[1]-a[1]);const maxC=cats.length?cats[0][1]:1;
+  const opK=`${kp("Animais ativos",ativos)}${kp("Itens para pedir agora",pedidos.filter(x=>x.s.cls==="out").length,pedidos.filter(x=>x.s.cls==="out").length?"neg":"")}${kp("Tarefas pendentes",pend.length)}`;
   return `
-  <div class="kpis">
+  <div class="kpis">${fin?`
     ${kp("Entradas",money(r.ent),"pos",r.aRec?`${money(r.aRec)} a receber`:"")}
     ${kp("Saídas",money(r.sai),"neg",r.aPag?`${money(r.aPag)} a pagar`:"")}
     ${(()=>{if(UI.modo!=="mes")return"";const pa=arr("compras").reduce((t,c)=>t+parcelas(c).filter(p=>!p.paga&&(p.data||"").slice(0,7)===UI.mes).reduce((x,p)=>x+p.valor,0),0);return pa?kp("Saídas + parcelas do mês",money(r.sai+pa),"neg",`${money(pa)} em parcelas ainda não pagas`):""})()}
     ${kp("Saldo",money(r.saldo),r.saldo>=0?"pos":"neg",periodLabel())}
     ${kp("Custo de alimentação",money(r.alim),"",`${arr("alimentacao").filter(a=>inPeriod(a.data)).length} registros`)}
-    ${kp("Custo médio por animal / mês",money(ativos?custoTotal/ativos/meses:0),"",`${ativos} animais ativos`)}
+    ${kp("Custo médio por animal / mês",money(ativos?custoTotal/ativos/meses:0),"",`${ativos} animais ativos`)}`:opK}
   </div>
-  <div class="grid2">
+  <div class="grid2">${fin?`
     <section class="panel chart"><h2>Entradas × saídas <small>últimos 6 meses até ${MESES[+UI.mes.slice(5,7)-1]}/${UI.mes.slice(0,4)}</small></h2>${chart6()}</section>
     <section class="panel"><h2>Para onde vai o dinheiro <small>${esc(periodLabel())}</small></h2>${cats.length?`<div class="bars">${cats.slice(0,8).map(([c,v])=>`<div class="bar-row"><span class="name" title="${esc(c)}">${esc(c)}</span><span class="track"><span class="fill" style="display:block;width:${Math.max(2,v/maxC*100)}%"></span></span><span class="num">${money(v)}</span></div>`).join("")}</div>`:`<p class="empty">Nenhuma saída no período.</p>`}</section>
     ${(()=>{const lim=addDias(today(),30);const ps=[];arr("compras").forEach(c=>parcelas(c).forEach(p=>{if(!p.paga&&p.data&&p.data<=lim)ps.push({c,p})}));ps.sort((a,b)=>a.p.data.localeCompare(b.p.data));
-      return ps.length?`<section class="panel"><h2>Parcelas a vencer <small>próximos 30 dias</small></h2><div class="list">${ps.slice(0,6).map(({c,p})=>`<div class="row" data-parcelas="${esc(c.id)}" style="cursor:pointer"><div><div>${esc(c.descricao)}</div><div class="sub">parcela ${p.n}/${parseNum(c.nParcelas)||1} · ${money(p.valor)}</div></div><span class="pill ${p.data<today()?"out":"warn"}">${dBR(p.data)}</span></div>`).join("")}</div></section>`:""})()}
+      return ps.length?`<section class="panel"><h2>Parcelas a vencer <small>próximos 30 dias</small></h2><div class="list">${ps.slice(0,6).map(({c,p})=>`<div class="row" data-parcelas="${esc(c.id)}" style="cursor:pointer"><div><div>${esc(c.descricao)}</div><div class="sub">parcela ${p.n}/${parseNum(c.nParcelas)||1} · ${money(p.valor)}</div></div><span class="pill ${p.data<today()?"out":"warn"}">${dBR(p.data)}</span></div>`).join("")}</div></section>`:""})()}`:""}
     <section class="panel"><h2>Próximas tarefas</h2>${pend.length?`<div class="list">${pend.slice(0,6).map(t=>`<div class="row" data-open="tarefas:${esc(t.id)}" style="cursor:pointer"><div><div>${esc(t.titulo)}</div><div class="sub">${esc(t.tipo||"")}${t.animal?" · "+esc(animalNome(t.animal)):""}</div></div><span class="pill ${t.data&&t.data<today()?"out":"neutral"}">${dBR(t.data)}</span></div>`).join("")}</div>`:`<p class="empty">Nenhuma tarefa pendente.</p>`}</section>
     <section class="panel"><h2>Hora de pedir <small>ração, feno, silagem, óleo…</small></h2>${pedidos.length?`<div class="list">${pedidos.slice(0,7).map(({e,s})=>`<div class="row" data-open="estoque:${esc(e.id)}" style="cursor:pointer"><div><div>${esc(e.item)}</div><div class="sub">${s.p.semConsumo?`saldo ${numFmt(e.quantidade)} ${esc(e.unidade||"")} · abaixo do mínimo`:`saldo ${numFmt(e.quantidade)} ${esc(e.unidade||"")} · dura até ${dBR(s.p.acaba)}${s.p.sug?` · pedir ${numFmt(s.p.sug)} ${esc(e.unidade||"")}`:""}`}</div></div><span class="pill ${s.cls}">${s.txt}</span></div>`).join("")}</div><p style="margin:10px 0 0"><a href="#estoque">Ver estoque completo</a></p>`:`<p class="empty">Cadastre os itens do estoque com o consumo por dia para o sistema avisar quando pedir.</p>`}</section>
-    <section class="panel" style="grid-column:1/-1"><h2>Custo por animal <small>${esc(periodLabel())} · os 5 maiores</small></h2>${cpa.linhas.length?`<div class="bars">${cpa.linhas.slice(0,5).map(l=>`<div class="bar-row"><span class="name">${esc(l.animal.nome)}</span><span class="track"><span class="fill" style="display:block;background:var(--brand);width:${Math.max(2,l.total/(cpa.linhas[0].total||1)*100)}%"></span></span><span class="num">${money(l.total)}</span></div>`).join("")}</div><p style="margin:12px 0 0"><a href="#custos">Ver detalhamento completo</a></p>`:`<p class="empty">Cadastre os animais para ver o custo de cada um.</p>`}</section>
+    ${fin?`<section class="panel" style="grid-column:1/-1"><h2>Custo por animal <small>${esc(periodLabel())} · os 5 maiores</small></h2>${cpa.linhas.length?`<div class="bars">${cpa.linhas.slice(0,5).map(l=>`<div class="bar-row"><span class="name">${esc(l.animal.nome)}</span><span class="track"><span class="fill" style="display:block;background:var(--brand);width:${Math.max(2,l.total/(cpa.linhas[0].total||1)*100)}%"></span></span><span class="num">${money(l.total)}</span></div>`).join("")}</div><p style="margin:12px 0 0"><a href="#custos">Ver detalhamento completo</a></p>`:`<p class="empty">Cadastre os animais para ver o custo de cada um.</p>`}</section>`:""}
   </div>`;
 };
 function painelOperacional(){
