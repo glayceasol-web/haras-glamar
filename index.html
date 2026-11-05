@@ -386,7 +386,7 @@ async function loadSupa(){
 }
 let PEND=null;
 function pendHTML(){if(!PEND||UI.view!=="painel")return"";const n=(PEND.animais||[]).length;const novos=(PEND.animais||[]).filter(a=>!S.animais[a.id]).length;
-  return `<div class="card" style="margin-bottom:16px;border:1px solid var(--accent)"><h3 style="margin:0 0 6px">${esc(PEND.titulo||"Cadastros prontos para entrar no sistema")}</h3><p style="margin:0 0 10px">${PEND.texto?esc(PEND.texto):`${n} animais com fotos e genealogia (${novos} novos), preparados a partir das fichas de registro.`} Confira e clique para incluir. Nada do que já está lançado é apagado.</p><p style="margin:0 0 10px;font-size:13.5px;color:var(--muted)">${[...(PEND.animais||[]).map(a=>a.nome),...(PEND.reproducao||[]).map(r=>"Reprodução: "+(r.nomePotro||r.doadora)),...(PEND.estoque||[]).map(e=>"Estoque: "+e.item),...(PEND.lancamentos||[]).map(l=>"Saída: "+(l.descricao||l.categoria))].map(esc).join(" · ")}</p><button type="button" class="btn primary" id="pendImport">Incluir no sistema</button> <button type="button" class="btn" id="pendLater">Agora não</button></div>`}
+  return `<div class="card" style="margin-bottom:16px;border:1px solid var(--accent)"><h3 style="margin:0 0 6px">${esc(PEND.titulo||"Cadastros prontos para entrar no sistema")}</h3><p style="margin:0 0 10px">${PEND.texto?esc(PEND.texto):`${n} animais com fotos e genealogia (${novos} novos), preparados a partir das fichas de registro.`} Confira e clique para incluir. Nada do que já está lançado é apagado.</p><p style="margin:0 0 10px;font-size:13.5px;color:var(--muted)">${[...(PEND.animais||[]).map(a=>a.nome),...(PEND.reproducao||[]).map(r=>"Reprodução: "+(r.nomePotro||r.doadora)),...(PEND.estoque||[]).map(e=>"Estoque: "+e.item),...(PEND.lancamentos||[]).map(l=>"Saída: "+(l.descricao||l.categoria))].map(esc).join(" · ")}</p>${PEND.erro?`<p style="margin:0 0 10px;color:var(--neg,#b42318)"><strong>Erro ao gravar:</strong> ${esc(PEND.erro)}</p>`:""}<button type="button" class="btn primary" id="pendImport">${PEND.erro?"Tentar de novo":"Incluir no sistema"}</button> <button type="button" class="btn" id="pendLater">Agora não</button></div>`}
 function showLogin(modo){
   let el=$("#loginBox");if(!el){el=document.createElement("div");el.id="loginBox";document.body.appendChild(el)}
   const conv=modo==="convite";if(conv)modo="nova";
@@ -1218,7 +1218,13 @@ view.addEventListener("click",async e=>{
   if(t.id==="cfgLogoDel"){S.cfg.logo="";S.cfg.semLogo=false;putCfg();render();return}
   if(t.id==="bkExport"){exportJSON();return}
   if(t.id==="bkImport"){window.__merge=false;$("#importFile").click();return}
-  if(t.id==="pendImport"&&PEND){const upd=!!PEND.titulo;let n=0;COLS.forEach(c=>(PEND[c]||[]).forEach(x=>{if(x&&x.id){put(c,Object.assign({},S[c][x.id]||{},x));n++}}));S.cfg.loteImportado=PEND.lote;S.cfg.iniciado=true;putCfg();PEND=null;render();toast(n+(upd?(n>1?" itens atualizados":" item atualizado"):" animais incluídos"));return}
+  if(t.id==="pendImport"&&PEND){const P=PEND;t.disabled=true;t.textContent="Gravando…";const itens=[];COLS.forEach(c=>(P[c]||[]).forEach(x=>{if(x&&x.id)itens.push([c,x])}));const erros=[];
+    for(const [c,x] of itens){const obj=clean(Object.assign({},S[c][x.id]||{},x));
+      if(backend==="supa"){const r=await SB.from("registros").upsert({colecao:c,id:obj.id,dados:obj});if(r.error)erros.push(`${x.nome||x.item||x.descricao||x.nomePotro||obj.id}: ${r.error.message}`);else S[c][obj.id]=obj}else put(c,obj)}
+    if(backend==="supa")await loadSupa();
+    const faltam=itens.filter(([c,x])=>!S[c][x.id]||(x.foto&&S[c][x.id].foto!==x.foto)).map(([c,x])=>x.nome||x.item||x.descricao||x.nomePotro||x.id);
+    if(erros.length||faltam.length){P.erro=(erros.length?erros.join(" · "):"Não ficaram gravados: "+faltam.join(", "));PEND=P;render();toast("Alguns itens não foram gravados. Veja o aviso no Painel.");return}
+    S.cfg.loteImportado=P.lote;S.cfg.iniciado=true;putCfg();PEND=null;render();toast(itens.length+" itens gravados e conferidos");return}
   if(t.id==="pendLater"){PEND=null;render();return}
   if(t.id==="bkMerge"){window.__merge=true;$("#importFile").click();return}
   if(t.id==="loadSample"||t.id==="wSample"){loadSample();return}
