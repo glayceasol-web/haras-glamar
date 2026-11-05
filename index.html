@@ -525,7 +525,7 @@ function calcHTML(c){
 
 /* ---------- definição dos módulos (campos editáveis) ---------- */
 const opt=list=>()=>list().map(v=>({v,t:v}));
-const animalOpts=(vazio="— Nenhum / geral —")=>()=>[{v:"",t:vazio},...arr("animais").sort((a,b)=>String(a.nome).localeCompare(b.nome)).map(a=>({v:a.id,t:a.nome+((a.status||"Ativo")!=="Ativo"?" (inativo)":"")}))];
+const animalOpts=(vazio="— Nenhum / geral —")=>()=>[{v:"",t:vazio},...arr("animais").sort((a,b)=>String(a.nome).localeCompare(b.nome)).map(a=>({v:a.id,t:a.nome+(a.apelido?` (${a.apelido})`:"")+((a.status||"Ativo")!=="Ativo"?" (inativo)":"")}))];
 const cocheiraOpts=()=>[{v:"",t:"— Nenhuma —"},...arr("cocheiras").sort((a,b)=>String(a.nome).localeCompare(b.nome,"pt-BR",{numeric:true})).map(c=>({v:c.id,t:c.nome}))];
 const estoqueOpts=()=>[{v:"",t:"— Não baixar do estoque —"},...arr("estoque").sort((a,b)=>String(a.item).localeCompare(b.item)).map(e=>({v:e.id,t:`${e.item} (saldo ${numFmt(e.quantidade)} ${e.unidade||""})`}))];
 
@@ -554,6 +554,7 @@ const MOD={
   animais:{titulo:"Animais",singular:"animal",fields:[
     {k:"foto",l:"Foto",t:"foto",full:1},
     {k:"nome",l:"Nome",t:"text",req:1},
+    {k:"apelido",l:"Apelido",t:"text",ph:"Como a equipe chama o animal"},
     {k:"categoria",l:"Categoria",t:"select",opts:opt(()=>L("categoriaAnimal")),def:"Próprio"},
     {k:"raca",l:"Raça",t:"text",ph:"Mangalarga Marchador, Quarto de Milha…"},
     {k:"sexo",l:"Sexo",t:"select",opts:opt(()=>["Macho","Fêmea","Castrado"])},
@@ -754,7 +755,7 @@ function pedVazio(g){return !g||PED_KEYS.every(([k])=>!g[k])}
 function nNome(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\(.*?\)/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()}
 // acha o animal cadastrado pelo nome, tolerando acentos, maiúsculas, nome abreviado ("Okane") ou parecido
 function animalDe(nome){const n=nNome(nome);if(!n)return null;const A=arr("animais");
-  let a=A.find(x=>nNome(x.nome)===n);if(a)return a;
+  let a=A.find(x=>nNome(x.nome)===n)||A.find(x=>x.apelido&&nNome(x.apelido)===n);if(a)return a;
   let c=A.filter(x=>{const m=nNome(x.nome);return m&&(m.startsWith(n+" ")||n.startsWith(m+" "))});if(c.length===1)return c[0];
   const w=n.split(" ")[0];if(w.length<3)return null;c=A.filter(x=>nNome(x.nome).split(" ")[0]===w);return c.length===1?c[0]:null}
 function pedDoAnimal(nome){const a=animalDe(nome);return a&&!pedVazio(a.genealogia)?a.genealogia:null}
@@ -915,7 +916,7 @@ V.animais=()=>{
   ${toolbar("animais",`<button type="button" class="btn" data-csv="animais">Exportar planilha</button>`)}
   ${tableView("animais",[
     {l:"",h:x=>x.foto?`<img class="thumb" src="${esc(x.foto)}" alt="" loading="lazy">`:`<span class="thumb thumb-empty" aria-hidden="true"></span>`},
-    {l:"Nome",h:x=>`<strong>${esc(x.nome)}</strong>`,v:x=>x.nome},{l:"Categoria",h:x=>`<span class="pill ${x.categoria==="Hospedado"?"brass":"neutral"}">${esc(x.categoria||"")}</span>`},
+    {l:"Nome",h:x=>`<strong>${esc(x.nome)}</strong>${x.apelido?`<div style="font-size:12.5px;color:var(--muted)">“${esc(x.apelido)}”</div>`:""}`,v:x=>x.nome+" "+(x.apelido||"")},{l:"Categoria",h:x=>`<span class="pill ${x.categoria==="Hospedado"?"brass":"neutral"}">${esc(x.categoria||"")}</span>`},
     {l:"Raça",k:"raca"},{l:"Sexo",k:"sexo"},{l:"Idade",v:x=>idade(x.nascimento)},{l:"Cocheira",v:x=>cocheiraNome(x.cocheira)},{l:"Proprietário",k:"proprietario"},
     {l:"Mensalidade",r:1,h:x=>x.mensalidade?`<span class="num">${money(x.mensalidade)}</span>`:""},
     {l:"Status",h:x=>`<span class="pill ${(x.status||"Ativo")==="Ativo"?"in":"neutral"}">${esc(x.status||"Ativo")}</span>`}
