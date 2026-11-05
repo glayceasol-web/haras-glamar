@@ -341,7 +341,7 @@ const cfg=()=>S.cfg;
 /* perfis: admin (dona do sistema), financeiro (Editor no compartilhamento), usuario (Contribuidor), leitura (Leitor) */
 let ROLE="admin",USERNAME="";
 const ROLE_NOME={admin:"Administrador",financeiro:"Financeiro",usuario:"Treinador",leitura:"Somente leitura"};
-const ROLE_VIEWS={usuario:["painel","alimentacao","animais","cocheiras","estoque","tarefas","reproducao","inseminacao","cascos","sanitario","tratamentos"],leitura:["painel","alimentacao","animais","cocheiras","estoque","tarefas","reproducao","inseminacao","cascos","sanitario","tratamentos"],financeiro:null,admin:null};
+const ROLE_VIEWS={usuario:["painel","alimentacao","animais","cocheiras","estoque","tarefas","reproducao","inseminacao","cascos","sanitario","tratamentos","competicoes"],leitura:["painel","alimentacao","animais","cocheiras","estoque","tarefas","reproducao","inseminacao","cascos","sanitario","tratamentos","competicoes"],financeiro:null,admin:null};
 function can(x){if(x==="cfg")return ROLE==="admin";if(x==="fin")return ROLE==="admin"||ROLE==="financeiro";if(x==="edit")return ROLE!=="leitura";return false}
 function viewOk(v){if(v==="configuracoes")return ROLE==="admin";const l=ROLE_VIEWS[ROLE];return !l||l.includes(v)}
 const L=k=>(S.cfg.listas&&S.cfg.listas[k])||DEFAULT_CFG.listas[k]||[];
@@ -637,15 +637,15 @@ const MOD={
     {k:"folder",l:"Folder da competição",t:"foto"},
     {k:"publicarSite",l:"Mostrar no site público",t:"select",opts:opt(()=>["Sim","Não"]),def:"Sim",help:"O site mostra data, local, evento, categoria e resultado. Nunca os custos nem o prêmio."},
     {k:"dataInicioPrep",l:"Início da preparação",t:"date",help:"Do início do preparo até a prova, o sistema soma o que o animal gastou a mais (alimento, suplemento, medicamento, soro…)."},
-    {k:"taxa",l:"Taxa de inscrição (R$)",t:"money"},
-    {k:"deslocamento",l:"Deslocamento (R$)",t:"money",help:"Transporte, combustível, pedágio, hospedagem."},
-    {k:"alimentacao",l:"Alimentação no evento (R$)",t:"money"},
-    {k:"uniforme",l:"Uniforme (R$)",t:"money"},
-    {k:"treinamento",l:"Treinamento (R$)",t:"money"},
-    {k:"custoExtra",l:"Custo extra de preparo (R$)",t:"money",help:"Outros gastos do preparo que não estão lançados no sistema."},
-    {k:"suplementos",l:"Suplementação / medicação do preparo",t:"list",full:1,sub:[{k:"nome",l:"Nome",ph:"Ex.: soro, vitamina E"},{k:"periodo",l:"Período",ph:"Ex.: 01/10 a 30/10"},{k:"valor",l:"Valor (R$)",money:1,ph:"0,00"},{k:"veterinario",l:"Veterinário",ph:"Nome"}]},
+    {k:"taxa",l:"Taxa de inscrição (R$)",t:"money",fin:1},
+    {k:"deslocamento",l:"Deslocamento (R$)",t:"money",fin:1,help:"Transporte, combustível, pedágio, hospedagem."},
+    {k:"alimentacao",l:"Alimentação no evento (R$)",t:"money",fin:1},
+    {k:"uniforme",l:"Uniforme (R$)",t:"money",fin:1},
+    {k:"treinamento",l:"Treinamento (R$)",t:"money",fin:1},
+    {k:"custoExtra",l:"Custo extra de preparo (R$)",t:"money",fin:1,help:"Outros gastos do preparo que não estão lançados no sistema."},
+    {k:"suplementos",l:"Suplementação / medicação do preparo",t:"list",full:1,fin:1,sub:[{k:"nome",l:"Nome",ph:"Ex.: soro, vitamina E"},{k:"periodo",l:"Período",ph:"Ex.: 01/10 a 30/10"},{k:"valor",l:"Valor (R$)",money:1,ph:"0,00"},{k:"veterinario",l:"Veterinário",ph:"Nome"}]},
     {k:"resultado",l:"Resultado / colocação",t:"text"},
-    {k:"premio",l:"Prêmio recebido (R$)",t:"money"},
+    {k:"premio",l:"Prêmio recebido (R$)",t:"money",fin:1},
     {k:"obs",l:"Observações",t:"textarea",full:1}]},
   reproducao:{titulo:"Reprodução",singular:"registro de reprodução",fields:[
     {k:"fotoDoadora",l:"Foto da doadora",t:"foto"},
@@ -735,7 +735,7 @@ const MOD={
     {k:"animal",l:"Animal",t:"select",opts:animalOpts("— Geral —")},
     {k:"responsavel",l:"Responsável",t:"text"},
     {k:"status",l:"Status",t:"select",opts:opt(()=>["Pendente","Feita"]),def:"Pendente"},
-    {k:"custo",l:"Custo previsto (R$)",t:"money",help:"Para lançar no financeiro, use “Lançar custo”."},
+    {k:"custo",l:"Custo previsto (R$)",t:"money",fin:1,help:"Para lançar no financeiro, use “Lançar custo”."},
     {k:"obs",l:"Observações",t:"textarea",full:1}]}
 };
 
@@ -807,7 +807,7 @@ function openForm(col,id,preset){
   if(col==="reproducao"){const pre=(campo,ped)=>{const a=animalDe(form.elements[campo].value);if(a&&a.nome!==form.elements[campo].value)form.elements[campo].value=a.nome;
     const fk=campo==="doadora"?"fotoDoadora":"fotoGaranhao";const box=form.querySelector(`[data-foto="${fk}"] .foto-prev`);if(box&&form.elements[fk]&&!form.elements[fk].value){box.innerHTML=a&&a.foto?`<img src="${esc(mini(a.foto))}" alt=""><span class="help" style="position:absolute;left:6px;bottom:4px;background:rgba(0,0,0,.6);color:#fff;padding:1px 6px;border-radius:6px;font-size:11px">da ficha em Animais</span>`:`<span>Sem foto</span>`;box.style.position="relative"}const g=a&&!pedVazio(a.genealogia)?a.genealogia:null;if(!g)return;const vazio=PED_KEYS.every(([k])=>!form.elements[ped+"__"+k].value.trim());if(vazio)PED_KEYS.forEach(([k])=>{form.elements[ped+"__"+k].value=g[k]||""})};
     form.elements.doadora.addEventListener("change",()=>pre("doadora","genealogiaDoadora"));form.elements.garanhao.addEventListener("change",()=>pre("garanhao","genealogiaGaranhao"));pre("doadora","genealogiaDoadora");pre("garanhao","genealogiaGaranhao")}
-  if(col==="competicoes"){const upd=()=>{const cur=Object.assign({},rec,readForm(form,m.fields));let box=form.querySelector(".calc");if(!box){form.insertAdjacentHTML("beforeend",'<div class="calc"></div>');box=form.querySelector(".calc")}box.innerHTML=calcHTML(cur)};upd();form.addEventListener("input",upd);form.addEventListener("change",upd);form.addEventListener("click",e=>{if(e.target.closest("[data-subdel],[data-subadd]"))setTimeout(upd,0)})}
+  if(col==="competicoes"&&can("fin")){const upd=()=>{const cur=Object.assign({},rec,readForm(form,m.fields));let box=form.querySelector(".calc");if(!box){form.insertAdjacentHTML("beforeend",'<div class="calc"></div>');box=form.querySelector(".calc")}box.innerHTML=calcHTML(cur)};upd();form.addEventListener("input",upd);form.addEventListener("change",upd);form.addEventListener("click",e=>{if(e.target.closest("[data-subdel],[data-subadd]"))setTimeout(upd,0)})}
   const firstInput=form.querySelector("input,select,textarea");if(firstInput)setTimeout(()=>firstInput.focus(),30);
   form.addEventListener("submit",e=>{e.preventDefault();$("#mSave").click()});
   if(!can("edit")){form.querySelectorAll("input,select,textarea,button").forEach(x=>x.disabled=true);return}
@@ -1165,7 +1165,7 @@ V.tarefas=()=>{
   ${tableView("tarefas",[
     {l:"Data",h:x=>`<span class="num">${dBR(x.data)}</span>`,v:x=>dBR(x.data)},
     {l:"Tarefa",h:x=>`<strong>${esc(x.titulo)}</strong>`,v:x=>x.titulo,wrap:1},{l:"Tipo",k:"tipo"},{l:"Animal",v:x=>animalNome(x.animal)},{l:"Responsável",k:"responsavel"},
-    {l:"Custo",r:1,h:x=>x.custo?`<span class="num">${money(x.custo)}</span>`:""},
+    {l:"Custo",r:1,fin:1,h:x=>x.custo?`<span class="num">${money(x.custo)}</span>`:""},
     {l:"Status",h:x=>(x.status||"Pendente")==="Feita"?`<span class="pill in">Feita</span>`:`<span class="pill ${x.data&&x.data<today()?"out":"warn"}">${x.data&&x.data<today()?"Atrasada":"Pendente"}</span>`},
     {l:"",h:x=>`<span style="display:inline-flex;gap:6px">${(x.status||"Pendente")!=="Feita"&&can("edit")?`<button type="button" class="btn small" data-feita="${esc(x.id)}">Marcar feita</button>`:""}${x.custo&&!x.lancado&&can("fin")?`<button type="button" class="btn small" data-lancar="${esc(x.id)}">Lançar custo</button>`:""}</span>`}
   ],rows,{vazio:f==="Pendente"?"Nenhuma tarefa pendente.":"Nenhuma tarefa."})}`;
@@ -1174,20 +1174,21 @@ V.competicoes=()=>{
   const rows=arr("competicoes").filter(c=>inPeriod(c.dataCompeticao)).sort((a,b)=>String(b.dataCompeticao).localeCompare(a.dataCompeticao));
   const tot=rows.reduce((s,c)=>s+compTotal(c),0),pr=rows.reduce((s,c)=>s+parseNum(c.premio),0),ex=rows.reduce((s,c)=>{const p=prepCalc(c);return s+(p?p.extra:0)},0);
   return `<div class="kpis"><div class="kpi"><span class="lbl">Competições</span><span class="val">${rows.length}</span><span class="hint">${esc(periodLabel())}</span></div>
-   <div class="kpi neg"><span class="lbl">Custo total</span><span class="val">${money(tot)}</span></div>
+   ${can("fin")?`<div class="kpi neg"><span class="lbl">Custo total</span><span class="val">${money(tot)}</span></div>
    <div class="kpi"><span class="lbl">Gasto extra no preparo</span><span class="val">${money(ex)}</span><span class="hint">calculado pelo sistema</span></div>
-   <div class="kpi ${pr-tot>=0?"pos":"neg"}"><span class="lbl">Prêmios − custos</span><span class="val">${money(pr-tot)}</span><span class="hint">${money(pr)} em prêmios</span></div></div>
-  <p class="note" style="margin:0 0 12px">O gasto extra do preparo compara o que o animal gastou entre o início da preparação e a prova (alimentação e despesas vinculadas a ele) com a média dos 90 dias anteriores. Para isso funcionar, registre a alimentação e as despesas do animal normalmente nas outras abas.</p>
+   <div class="kpi ${pr-tot>=0?"pos":"neg"}"><span class="lbl">Prêmios − custos</span><span class="val">${money(pr-tot)}</span><span class="hint">${money(pr)} em prêmios</span></div>`:`<div class="kpi"><span class="lbl">Com resultado</span><span class="val">${rows.filter(c=>c.resultado).length}</span></div>`}</div>
+  <p class="note" style="margin:0 0 12px"${can("fin")?"":" hidden"}>O gasto extra do preparo compara o que o animal gastou entre o início da preparação e a prova (alimentação e despesas vinculadas a ele) com a média dos 90 dias anteriores. Para isso funcionar, registre a alimentação e as despesas do animal normalmente nas outras abas.</p>
   ${toolbar("competicoes",`<button type="button" class="btn" data-csv="competicoes">Exportar planilha</button>`)}
   ${tableView("competicoes",[
     {l:"Data",h:x=>`<span class="num">${dBR(x.dataCompeticao)}</span>`,v:x=>dBR(x.dataCompeticao)},
     {l:"Evento",h:x=>`<strong>${esc(x.evento||"—")}</strong>${x.local?`<div class="sub" style="font-size:12.5px;color:var(--muted)">${esc(x.local)}</div>`:""}`,v:x=>x.evento+" "+(x.local||"")},
     {l:"Animal",v:x=>animalNome(x.animal)},{l:"Categoria",k:"categoria"},
     {l:"Preparo",v:x=>{const p=prepCalc(x);return p?p.dias+" dias":"—"}},
-    {l:"Custos informados",r:1,h:x=>`<span class="num">${money(compDireto(x))}</span>`},
-    {l:"Extra do preparo",r:1,h:x=>{const p=prepCalc(x);return `<span class="num">${p?money(p.extra):"—"}</span>`}},
-    {l:"Total",r:1,h:x=>`<strong class="num">${money(compTotal(x))}</strong>`},
-    {l:"Prêmio",r:1,h:x=>x.premio?`<span class="num amt-in">${money(x.premio)}</span>`:""},
+    {l:"Resultado",soOp:1,k:"resultado"},
+    {l:"Custos informados",r:1,fin:1,h:x=>`<span class="num">${money(compDireto(x))}</span>`},
+    {l:"Extra do preparo",r:1,fin:1,h:x=>{const p=prepCalc(x);return `<span class="num">${p?money(p.extra):"—"}</span>`}},
+    {l:"Total",r:1,fin:1,h:x=>`<strong class="num">${money(compTotal(x))}</strong>`},
+    {l:"Prêmio",r:1,fin:1,h:x=>x.premio?`<span class="num amt-in">${money(x.premio)}</span>`:""},
     {l:"",h:x=>can("fin")?(x.lancado?`<span class="pill neutral">No financeiro</span>`:`<button type="button" class="btn small" data-complancar="${esc(x.id)}">Lançar no financeiro</button>`):""}
   ],rows,{vazio:"Nenhuma competição neste período.",foot:rs=>`<td colspan="7">Total (${rs.length})</td><td class="r num">${money(rs.reduce((s,c)=>s+compTotal(c),0))}</td><td class="r num">${money(rs.reduce((s,c)=>s+parseNum(c.premio),0))}</td><td></td>`})}`;
 };
@@ -1361,7 +1362,7 @@ function usuariosHTML(){
    <div class="tablewrap"><table><thead><tr><th>E-mail</th><th>Nome</th><th>Perfil</th></tr></thead><tbody>
    ${PERFIS.map(p=>`<tr data-user="${esc(p.user_id)}"><td>${esc(p.email)}</td><td><input type="text" data-unome="${esc(p.user_id)}" value="${esc(p.nome||"")}" aria-label="Nome" placeholder="Nome"></td><td><select data-uperfil="${esc(p.user_id)}" aria-label="Perfil"${ME&&p.user_id===ME.id?" disabled":""}>${Object.entries(ROLE_NOME).map(([k,t])=>`<option value="${k}"${p.perfil===k?" selected":""}>${t}</option>`).join("")}</select></td></tr>`).join("")}
    </tbody></table></div>
-   <p class="note"><strong>Administrador:</strong> tudo. <strong>Financeiro:</strong> tudo menos Configurações. <strong>Treinador:</strong> alimentação, animais, cocheiras, estoque (o que tem e o que pedir), tarefas, ferrageamento, reprodução e inseminação, sempre <strong>sem nenhum valor em R$</strong>; não vê Entradas e saídas, Competições, Compras parceladas nem Custo por animal. <strong>Somente leitura:</strong> vê o mesmo que o Treinador, sem alterar.</p></section>`;
+   <p class="note"><strong>Administrador:</strong> tudo. <strong>Financeiro:</strong> tudo menos Configurações. <strong>Treinador:</strong> alimentação, animais, cocheiras, estoque (o que tem e o que pedir), tarefas, ferrageamento, reprodução e inseminação, sempre <strong>sem nenhum valor em R$</strong>; vê também as Competições (datas, local e resultado); não vê Entradas e saídas, Compras parceladas nem Custo por animal. <strong>Somente leitura:</strong> vê o mesmo que o Treinador, sem alterar.</p></section>`;
 }
 function welcome(){
   return `<div class="welcome"><div><div class="ex-flag">Primeiro acesso</div><h2>Bem-vindo ao controle do ${esc(S.cfg.nome)}</h2>
