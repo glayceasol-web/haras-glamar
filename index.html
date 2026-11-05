@@ -484,15 +484,16 @@ function custoPorAnimal(){
   const ativos=animaisAtivos();const n=ativos.length||1;const naoRat=new Set(L("naoRatear"));
   const linhas={};ativos.forEach(a=>linhas[a.id]={animal:a,alim:0,direto:0,rateio:0,receita:0});
   const ensure=id=>{if(!linhas[id]&&S.animais[id])linhas[id]={animal:S.animais[id],alim:0,direto:0,rateio:0,receita:0};return linhas[id]};
-  let geral=0,alimGeral=0;
+  let geral=0,alimGeral=0;const tratLanc=new Set(arr("tratamentos").map(x=>x.lancamentoId).filter(Boolean));
   arr("lancamentos").filter(l=>inPeriod(l.data)).forEach(l=>{const v=parseNum(l.valor);
     if(l.tipo==="Entrada"){if(l.animal&&ensure(l.animal))linhas[l.animal].receita+=v;return}
+    if(l.animal&&tratLanc.has(l.id))return;
     if(l.animal&&ensure(l.animal)){linhas[l.animal].direto+=v;return}
     if(l.cocheira){const occ=ativos.filter(a=>a.cocheira===l.cocheira);if(occ.length){occ.forEach(a=>linhas[a.id].direto+=v/occ.length);return}}
     if(!naoRat.has(l.categoria))geral+=v;});
   const dI=dietaIds();const cd=custoDieta();Object.entries(cd.por).forEach(([id,v])=>{if(ensure(id))linhas[id].alim+=v});
   arr("alimentacao").filter(a=>inPeriod(a.data)&&!dI.has(a.estoqueId)).forEach(a=>{const v=alimTotal(a);if(a.animal&&ensure(a.animal))linhas[a.animal].alim+=v;else alimGeral+=v});
-  arr("tratamentos").filter(x=>inPeriod(x.data)&&!x.lancado&&x.animal).forEach(x=>{if(ensure(x.animal))linhas[x.animal].direto+=tratTotal(x)});
+  arr("tratamentos").filter(x=>x.animal).forEach(x=>{const v=tratNoPeriodo(x);if(v&&ensure(x.animal))linhas[x.animal].direto+=v});
   arr("sanitario").filter(x=>inPeriod(x.data)&&parseNum(x.valorPorAnimal)).forEach(x=>(x.animais||[]).forEach(id=>{if(ensure(id))linhas[id].direto+=parseNum(x.valorPorAnimal)}));
   arr("cascos").filter(c=>inPeriod(c.data)&&!c.lancado&&c.animal).forEach(c=>{if(ensure(c.animal))linhas[c.animal].direto+=parseNum(c.valor)});
   arr("competicoes").filter(c=>inPeriod(c.dataCompeticao)&&!c.lancado&&c.animal).forEach(c=>{if(ensure(c.animal)){linhas[c.animal].comp=(linhas[c.animal].comp||0)+compDireto(c)}});
@@ -719,7 +720,7 @@ const MOD={
     {k:"animal",l:"Animal",t:"select",opts:animalOpts("— Escolha o animal —"),req:1},
     {k:"motivo",l:"Doença / motivo",t:"text",req:1,ph:"Ex.: Anemia, cólica, ferida, infecção",sugg:()=>[...new Set(arr("tratamentos").map(x=>x.motivo).filter(Boolean))]},
     {k:"veterinario",l:"Veterinário",t:"text",sugg:()=>[...new Set(arr("tratamentos").map(x=>x.veterinario).filter(Boolean))]},
-    {k:"duracao",l:"Duração",t:"text",ph:"Ex.: 15 dias"},
+    {k:"duracao",l:"Duração",t:"text",ph:"Ex.: 15 dias",help:"O custo é dividido por estes dias, e cada mês recebe a sua parte."},
     {k:"resultado",l:"Resultado",t:"select",opts:opt(()=>["Em andamento","Curado / resolvido","Melhorou","Sem melhora"]),def:"Em andamento"},
     {k:"protocolo",l:"Protocolo usado",t:"textarea",full:1,ph:"Passo a passo: medicamento, dose, via, por quantos dias…"},
     {k:"medicamentos",l:"Medicamentos comprados",t:"list",full:1,fin:1,sub:[{k:"nome",l:"Produto",ph:"Ex.: Laviron 20 ml"},{k:"qtd",l:"Qtd.",ph:"1"},{k:"valor",l:"Valor unitário (R$)",money:1,ph:"0,00"}]},
@@ -1069,15 +1070,17 @@ V.estoque=()=>{
 const CASCO_PADRAO={ferr:45,casq:45};
 function cascoTipo(sv){sv=sv||"";return{ferr:/ferr/i.test(sv),casq:/casq/i.test(sv)}}
 const SANIT_TIPOS=["Carrapaticida (Butox)","Antiparasitário (Dectomax)","Vermifugação","Vacinação","Odontológico (pontas de dentes)","Outro"];
+function tratDias(x){return Math.max(1,parseInt(String(x.duracao||"").replace(/\D+/g," ").trim().split(" ")[0])||1)}
+function tratNoPeriodo(x){if(!x.data)return 0;const n=tratDias(x),v=tratTotal(x)/n;let t=0;for(let i=0;i<n;i++)if(inPeriod(addDias(x.data,i)))t+=v;return t}
 function tratTotal(x){return (x.medicamentos||[]).reduce((s,m)=>s+(parseNum(m.qtd)||1)*parseNum(m.valor),0)+parseNum(x.outrosCustos)}
 V.tratamentos=()=>{
   const rows=arr("tratamentos").sort((a,b)=>String(b.data).localeCompare(a.data));const per=rows.filter(x=>inPeriod(x.data));
   const grupos={};rows.forEach(x=>{const k=(x.motivo||"Sem motivo").trim();(grupos[k]=grupos[k]||[]).push(x)});
   const resumo=Object.entries(grupos).sort((a,b)=>a[0].localeCompare(b[0])).map(([k,l])=>{const tot=l.reduce((s,x)=>s+tratTotal(x),0);return `<tr data-open="tratamentos:${esc(l[0].id)}" style="cursor:pointer"><td><strong>${esc(k)}</strong></td><td>${l.length}</td><td>${esc(l.map(x=>animalNome(x.animal)).filter(Boolean).join(", "))}</td><td class="num">${dBR(l[0].data)}</td>${can("fin")?`<td class="r num">${money(tot/l.length)}</td>`:""}</tr>`}).join("");
-  return `<div class="kpis">${can("fin")?`<div class="kpi"><span class="lbl">Gasto em ${esc(periodLabel())}</span><span class="val">${money(per.reduce((s,x)=>s+tratTotal(x),0))}</span><span class="hint">${per.length} tratamento${per.length===1?"":"s"}</span></div>`:""}
+  return `<div class="kpis">${can("fin")?`<div class="kpi"><span class="lbl">Gasto em ${esc(periodLabel())}</span><span class="val">${money(rows.reduce((s,x)=>s+tratNoPeriodo(x),0))}</span><span class="hint">dividido pelos dias de cada tratamento</span></div>`:""}
    <div class="kpi"><span class="lbl">Em andamento</span><span class="val">${rows.filter(x=>(x.resultado||"Em andamento")==="Em andamento").length}</span></div>
    <div class="kpi"><span class="lbl">Tratamentos registrados</span><span class="val">${rows.length}</span></div></div>
-  <p class="note" style="margin:0 0 12px">Memória dos tratamentos: qual protocolo foi usado em cada doença, os medicamentos com o valor unitário e quanto custou. O custo entra no custo do animal. Toque em uma linha para ver o protocolo completo.</p>
+  <p class="note" style="margin:0 0 12px">Memória dos tratamentos: qual protocolo foi usado em cada doença, os medicamentos com o valor unitário e quanto custou. O custo entra no custo do animal, dividido pelos dias do tratamento (cada mês recebe a sua parte). Toque em uma linha para ver o protocolo completo.</p>
   ${rows.length?`<div class="card" style="margin-bottom:16px"><h3 style="margin:0 0 8px">Protocolos já usados</h3><div class="tablewrap"><table><thead><tr><th>Doença / motivo</th><th>Vezes</th><th>Animais</th><th>Último</th>${can("fin")?`<th class="r">Custo médio</th>`:""}</tr></thead><tbody>${resumo}</tbody></table></div></div>`:""}
   ${toolbar("tratamentos",`<button type="button" class="btn" data-csv="tratamentos">Exportar planilha</button>`)}
   ${tableView("tratamentos",[
@@ -1086,7 +1089,7 @@ V.tratamentos=()=>{
     {l:"Motivo",k:"motivo"},
     {l:"Protocolo",wrap:1,v:x=>(x.protocolo||"").split("\n")[0].slice(0,120)},
     {l:"Medicamentos",wrap:1,fin:1,v:x=>(x.medicamentos||[]).map(m=>`${m.qtd||1}× ${m.nome}`).join(", ")},
-    {l:"Custo",r:1,fin:1,h:x=>`<span class="num">${money(tratTotal(x))}</span>${x.lancado?`<div style="font-size:12px;color:var(--muted)">já em Entradas e saídas</div>`:""}`},
+    {l:"Custo",r:1,fin:1,h:x=>`<span class="num">${money(tratTotal(x))}</span><div style="font-size:12px;color:var(--muted)">${tratDias(x)} dia${tratDias(x)>1?"s":""}${x.lancamentoId?" · pago em Entradas e saídas":""}</div>`},
     {l:"Resultado",h:x=>`<span class="pill ${(x.resultado||"Em andamento")==="Em andamento"?"warn":x.resultado==="Sem melhora"?"out":"in"}">${esc(x.resultado||"Em andamento")}</span>`}
   ],rows,{vazio:"Nenhum tratamento registrado ainda."})}`;
 };
