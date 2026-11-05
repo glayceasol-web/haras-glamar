@@ -377,7 +377,7 @@ async function startSupa(user){
   window.addEventListener("focus",()=>{clearTimeout(window.__rf);window.__rf=setTimeout(()=>loadSupa(),400)});
 }
 async function loadSupa(){
-  const all=[];for(let from=0;;from+=1000){const r=await SB.from("registros").select("colecao,id,dados").range(from,from+999);if(r.error){setSync("warn","Erro ao carregar: "+r.error.message);break}all.push(...r.data);if(r.data.length<1000)break}
+  const all=[];for(let from=0;;from+=1000){let r;try{r=await SB.from("registros").select("colecao,id,dados").range(from,from+999)}catch(e){r={error:e}}if(r.error){setSync("warn","Sem conexão com o banco. Os dados na tela podem estar desatualizados.");if(UI.loaded){render();return}break}all.push(...r.data);if(r.data.length<1000)break}
   COLS.forEach(c=>S[c]={});
   all.forEach(r=>{if(r.colecao==="config"&&r.id==="geral")S.cfg=mergeCfg(r.dados);else if(S[r.colecao])S[r.colecao][r.id]=Object.assign({},r.dados,{id:r.id})});
   if(can("cfg")){const p=await SB.from("perfis").select("*").order("criado");PERFIS=p.data||[]}
@@ -1269,7 +1269,8 @@ view.addEventListener("click",async e=>{
   if(t.id==="bkImport"){window.__merge=false;$("#importFile").click();return}
   if(t.id==="pendImport"&&PEND){const P=PEND;t.disabled=true;t.textContent="Gravando…";const itens=[];COLS.forEach(c=>(P[c]||[]).forEach(x=>{if(x&&x.id)itens.push([c,x])}));const erros=[];
     for(const [c,x] of itens){const obj=clean(Object.assign({},S[c][x.id]||{},x));
-      if(backend==="supa"){const r=await SB.from("registros").upsert({colecao:c,id:obj.id,dados:obj});if(r.error)erros.push(`${x.nome||x.item||x.descricao||x.nomePotro||obj.id}: ${r.error.message}`);else S[c][obj.id]=obj}else put(c,obj)}
+      if(backend==="supa"){let r;for(let tent=0;tent<4;tent++){try{r=await SB.from("registros").upsert({colecao:c,id:obj.id,dados:obj})}catch(e){r={error:e}}if(!r.error)break;t.textContent=`Gravando… (nova tentativa ${tent+1})`;await new Promise(ok=>setTimeout(ok,1500*(tent+1)))}
+        if(r.error){const m=String(r.error.message||r.error);erros.push(`${x.nome||x.item||x.descricao||x.nomePotro||obj.id}: ${/fetch|network|Load failed/i.test(m)?"sem conexão com o banco":m}`)}else S[c][obj.id]=obj}else put(c,obj)}
     if(backend==="supa")await loadSupa();
     const faltam=itens.filter(([c,x])=>!S[c][x.id]||(x.foto&&S[c][x.id].foto!==x.foto)).map(([c,x])=>x.nome||x.item||x.descricao||x.nomePotro||x.id);
     if(erros.length||faltam.length){P.erro=(erros.length?erros.join(" · "):"Não ficaram gravados: "+faltam.join(", "));PEND=P;render();toast("Alguns itens não foram gravados. Veja o aviso no Painel.");return}
