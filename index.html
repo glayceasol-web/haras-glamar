@@ -299,7 +299,7 @@ td:has(.thumb){padding-block:5px;width:56px}
 const $=(s,r=document)=>r.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const BRL=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"});
-const money=v=>BRL.format(Number(v)||0);
+const money=v=>can("fin")?BRL.format(Number(v)||0):"—";
 const numFmt=v=>(Number(v)||0).toLocaleString("pt-BR",{maximumFractionDigits:2});
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
@@ -340,8 +340,8 @@ try{const p=JSON.parse(lsGet("glamar-ui")||"{}");if(p.modo)UI.modo=p.modo;if(p.m
 const cfg=()=>S.cfg;
 /* perfis: admin (dona do sistema), financeiro (Editor no compartilhamento), usuario (Contribuidor), leitura (Leitor) */
 let ROLE="admin",USERNAME="";
-const ROLE_NOME={admin:"Administrador",financeiro:"Financeiro",usuario:"Usuário",leitura:"Somente leitura"};
-const ROLE_VIEWS={usuario:["painel","alimentacao","animais","cocheiras","estoque","tarefas","reproducao","cascos"],leitura:["painel","alimentacao","animais","cocheiras","estoque","tarefas","reproducao","cascos"],financeiro:null,admin:null};
+const ROLE_NOME={admin:"Administrador",financeiro:"Financeiro",usuario:"Treinador",leitura:"Somente leitura"};
+const ROLE_VIEWS={usuario:["painel","alimentacao","animais","cocheiras","estoque","tarefas","reproducao","inseminacao","cascos"],leitura:["painel","alimentacao","animais","cocheiras","estoque","tarefas","reproducao","inseminacao","cascos"],financeiro:null,admin:null};
 function can(x){if(x==="cfg")return ROLE==="admin";if(x==="fin")return ROLE==="admin"||ROLE==="financeiro";if(x==="edit")return ROLE!=="leitura";return false}
 function viewOk(v){if(v==="configuracoes")return ROLE==="admin";const l=ROLE_VIEWS[ROLE];return !l||l.includes(v)}
 const L=k=>(S.cfg.listas&&S.cfg.listas[k])||DEFAULT_CFG.listas[k]||[];
@@ -560,7 +560,7 @@ const MOD={
     {k:"estoqueId",l:"Baixar do estoque",t:"select",opts:estoqueOpts,help:"Desconta a quantidade do item e usa o custo dele."},
     {k:"quantidade",l:"Quantidade",t:"number",req:1},
     {k:"unidade",l:"Unidade",t:"select",opts:opt(()=>L("unidade")),def:"kg"},
-    {k:"custoUnit",l:"Custo por unidade (R$)",t:"money",help:"Em branco: usa o custo do item do estoque."},
+    {k:"custoUnit",l:"Custo por unidade (R$)",t:"money",fin:1,help:"Em branco: usa o custo do item do estoque."},
     {k:"periodo",l:"Trato",t:"select",opts:opt(()=>["Dia inteiro","Manhã","Tarde","Noite","Semana","Mês"]),def:"Dia inteiro"},
     {k:"obs",l:"Observações",t:"textarea",full:1}]},
   animais:{titulo:"Animais",singular:"animal",fields:[
@@ -576,7 +576,7 @@ const MOD={
     {k:"cocheira",l:"Cocheira",t:"select",opts:cocheiraOpts},
     {k:"proprietario",l:"Proprietário",t:"text"},
     {k:"telefone",l:"Telefone do proprietário",t:"text"},
-    {k:"mensalidade",l:"Mensalidade de hospedagem (R$)",t:"money",help:"Usada no botão “Gerar mensalidades”."},
+    {k:"mensalidade",l:"Mensalidade de hospedagem (R$)",t:"money",fin:1,help:"Usada no botão “Gerar mensalidades”."},
     {k:"entradaData",l:"Data de entrada no CTE",t:"date"},
     {k:"status",l:"Status",t:"select",opts:opt(()=>["Ativo","Inativo"]),def:"Ativo",help:"Só animais ativos entram no rateio."},
     {k:"publicarSite",l:"Mostrar no site público",t:"select",opts:opt(()=>["Sim","Não"]),def:"Sim",help:"O site mostra só animais próprios, ativos e com registro."},
@@ -600,7 +600,7 @@ const MOD={
     {k:"prazoEntrega",l:"Prazo de entrega do fornecedor (dias)",t:"number",def:"3"},
     {k:"margem",l:"Margem de segurança (dias)",t:"number",def:"5",help:"Folga para atraso de entrega."},
     {k:"cobertura",l:"Cada compra deve durar (dias)",t:"number",def:"30",help:"Usado para sugerir a quantidade a pedir."},
-    {k:"custoUnit",l:"Custo por unidade (R$)",t:"money"},
+    {k:"custoUnit",l:"Custo por unidade (R$)",t:"money",fin:1},
     {k:"fornecedor",l:"Fornecedor",t:"text"},
     {k:"validade",l:"Validade",t:"date"},
     {k:"obs",l:"Observações",t:"textarea",full:1}]},
@@ -744,7 +744,7 @@ function openForm(col,id,preset){
       if(c.custoPaleta)form.elements.custoPaleta.value=String(c.custoPaleta).replace(".",",");
       if(c.garanhao&&!form.elements.garanhao.value)form.elements.garanhao.value=c.garanhao;
       if(rs.qtd&&rs.usadas>=rs.qtd&&!id)toast(`Atenção: as ${rs.qtd} coberturas deste pacote já foram usadas`)});
-    const calc=()=>{const cur=Object.assign({},rec,readForm(form,m.fields));let box=form.querySelector(".calc");if(!box){form.insertAdjacentHTML("beforeend",'<div class="calc"></div>');box=form.querySelector(".calc")}const c=custoInsem(cur);
+    const calc=()=>{if(!can("fin"))return;const cur=Object.assign({},rec,readForm(form,m.fields));let box=form.querySelector(".calc");if(!box){form.insertAdjacentHTML("beforeend",'<div class="calc"></div>');box=form.querySelector(".calc")}const c=custoInsem(cur);
       const ln=(a,b,cls="")=>`<div class="ln ${cls}"><span>${a}</span><span class="num">${b}</span></div>`;
       box.innerHTML=`<span class="t">Custo deste potro</span>`+[["Cobertura",c.cobertura],["Paletas extras e frete do pacote",c.pacote],[`Paletas (${numFmt(cur.paletas)} × ${money(cur.custoPaleta)})`,c.paletas],["Frete do sêmen",c.frete],["Fertilização",c.fertilizacao],["Medicamentos",c.medicamentos],["Receptora",c.receptora],[`Ultrassons (${(cur.ultrassons||[]).length})`,c.ultrassons],["Outros",c.outros]].filter(x=>x[1]).map(x=>ln(x[0],money(x[1]))).join("")+ln("Total",money(c.total),"tot")};
     calc();form.addEventListener("input",calc);form.addEventListener("change",calc);form.addEventListener("click",e=>{if(e.target.closest("[data-subdel],[data-subadd]"))setTimeout(calc,0)})}
@@ -817,6 +817,7 @@ function abrirEnquadrar(src,cb){if(!src)return;const d=document.createElement("d
 function resizeImg(file,max,q){return new Promise((ok,err)=>{const rd=new FileReader();rd.onerror=err;rd.onload=()=>{const img=new Image();img.onerror=err;img.onload=()=>{const k=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext("2d").drawImage(img,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",q))};img.src=rd.result};rd.readAsDataURL(file)})}
 /* ---------- tabela genérica ---------- */
 function tableView(col,cols,rows,opts={}){
+  cols=cols.filter(c=>can("fin")?!c.soOp:!c.fin);if(!can("fin")&&opts.foot){const n=cols.length;opts=Object.assign({},opts,{foot:rs=>`<td colspan="${n}">Total (${rs.length})</td>`})}
   const q=(UI.busca[col]||"").toLowerCase();
   if(q)rows=rows.filter(r=>JSON.stringify(Object.values(r)).toLowerCase().includes(q)||cols.some(c=>String(c.v?c.v(r):r[c.k]??"").toLowerCase().includes(q)));
   const head=cols.map(c=>`<th class="${c.r?"r":""}">${esc(c.l)}</th>`).join("");
@@ -934,8 +935,8 @@ V.alimentacao=()=>{
   const rows=arr("alimentacao").filter(a=>inPeriod(a.data)).sort((a,b)=>String(b.data).localeCompare(a.data));
   const porAl={};rows.forEach(a=>porAl[a.alimento]=(porAl[a.alimento]||0)+alimTotal(a));
   const tot=rows.reduce((s,a)=>s+alimTotal(a),0);
-  return `<div class="kpis"><div class="kpi"><span class="lbl">Custo de alimentação</span><span class="val">${money(tot)}</span><span class="hint">${esc(periodLabel())}</span></div>
-  ${Object.entries(porAl).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`<div class="kpi"><span class="lbl">${esc(k)}</span><span class="val">${money(v)}</span></div>`).join("")}</div>
+  return `<div class="kpis">${!can("fin")?`<div class="kpi"><span class="lbl">Tratos registrados</span><span class="val">${rows.length}</span><span class="hint">${esc(periodLabel())}</span></div>`:`<div class="kpi"><span class="lbl">Custo de alimentação</span><span class="val">${money(tot)}</span><span class="hint">${esc(periodLabel())}</span></div>`}
+  ${!can("fin")?"":Object.entries(porAl).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`<div class="kpi"><span class="lbl">${esc(k)}</span><span class="val">${money(v)}</span></div>`).join("")}</div>
   <p class="note" style="margin:0 0 12px">Aqui você registra o que foi servido (consumo). Ao escolher um item em “Baixar do estoque”, a quantidade sai do estoque automaticamente. A compra do alimento continua sendo lançada em Entradas e saídas.</p>
   ${toolbar("alimentacao",`<button type="button" class="btn" data-csv="alimentacao">Exportar planilha</button>`)}
   ${tableView("alimentacao",[
@@ -943,22 +944,22 @@ V.alimentacao=()=>{
     {l:"Animal",v:x=>x.animal?animalNome(x.animal):"Todos (rateio)"},
     {l:"Alimento",k:"alimento"},{l:"Trato",k:"periodo"},
     {l:"Quantidade",r:1,h:x=>`<span class="num">${numFmt(x.quantidade)} ${esc(x.unidade||"")}</span>`},
-    {l:"Custo unit.",r:1,h:x=>`<span class="num">${money(x.custoUnit)}</span>`},
+    {l:"Custo unit.",r:1,fin:1,h:x=>`<span class="num">${money(x.custoUnit)}</span>`},
     {l:"Estoque",v:x=>x.estoqueId?estoqueNome(x.estoqueId):"—"},
-    {l:"Total",r:1,h:x=>`<span class="num">${money(alimTotal(x))}</span>`}
+    {l:"Total",r:1,fin:1,h:x=>`<span class="num">${money(alimTotal(x))}</span>`}
   ],rows,{vazio:"Nenhum registro de alimentação neste período.",foot:rs=>`<td colspan="7">Total (${rs.length})</td><td class="r num">${money(rs.reduce((s,a)=>s+alimTotal(a),0))}</td>`})}`;
 };
 V.animais=()=>{
   const rows=arr("animais").sort((a,b)=>((a.status||"Ativo")===(b.status||"Ativo")?0:(a.status||"Ativo")==="Ativo"?-1:1)||String(a.nome).localeCompare(b.nome));
   const hosp=animaisAtivos().filter(a=>a.categoria==="Hospedado");
   return `<div class="kpis"><div class="kpi"><span class="lbl">Animais ativos</span><span class="val">${animaisAtivos().length}</span></div>
-    <div class="kpi"><span class="lbl">Hospedados</span><span class="val">${hosp.length}</span><span class="hint">${money(hosp.reduce((s,a)=>s+parseNum(a.mensalidade),0))} em mensalidades</span></div></div>
+    <div class="kpi"><span class="lbl">Hospedados</span><span class="val">${hosp.length}</span>${can("fin")?`<span class="hint">${money(hosp.reduce((s,a)=>s+parseNum(a.mensalidade),0))} em mensalidades</span>`:""}</div></div>
   ${toolbar("animais",`<button type="button" class="btn" data-csv="animais">Exportar planilha</button>`)}
   ${tableView("animais",[
     {l:"",h:x=>x.foto?`<img class="thumb" src="${esc(mini(x.foto))}" alt="" loading="lazy">`:`<span class="thumb thumb-empty" aria-hidden="true"></span>`},
     {l:"Nome",h:x=>`<strong>${esc(x.nome)}</strong>${x.apelido?`<div style="font-size:12.5px;color:var(--muted)">“${esc(x.apelido)}”</div>`:""}`,v:x=>x.nome+" "+(x.apelido||"")},{l:"Categoria",h:x=>`<span class="pill ${x.categoria==="Hospedado"?"brass":"neutral"}">${esc(x.categoria||"")}</span>`},
     {l:"Raça",k:"raca"},{l:"Sexo",k:"sexo"},{l:"Idade",v:x=>idade(x.nascimento)},{l:"Cocheira",v:x=>cocheiraNome(x.cocheira)},{l:"Proprietário",k:"proprietario"},
-    {l:"Mensalidade",r:1,h:x=>x.mensalidade?`<span class="num">${money(x.mensalidade)}</span>`:""},
+    {l:"Mensalidade",r:1,fin:1,h:x=>x.mensalidade?`<span class="num">${money(x.mensalidade)}</span>`:""},
     {l:"Status",h:x=>`<span class="pill ${(x.status||"Ativo")==="Ativo"?"in":"neutral"}">${esc(x.status||"Ativo")}</span>`}
   ],rows,{vazio:"Nenhum animal cadastrado."})}`;
 };
@@ -984,7 +985,7 @@ V.estoque=()=>{
   const agora=rows.filter(e=>e._s.cls==="out").length,semana=rows.filter(e=>e._s.cls==="warn").length;
   return `<div class="kpis"><div class="kpi ${agora?"neg":""}"><span class="lbl">Pedir agora</span><span class="val">${agora}</span><span class="hint">itens no limite</span></div>
    <div class="kpi"><span class="lbl">Pedir nos próximos 7 dias</span><span class="val">${semana}</span></div>
-   <div class="kpi"><span class="lbl">Valor em estoque</span><span class="val">${money(val)}</span></div></div>
+   ${can("fin")?`<div class="kpi"><span class="lbl">Valor em estoque</span><span class="val">${money(val)}</span></div>`:""}</div>
   <p class="note" style="margin:0 0 12px">Para cada item, informe o consumo por dia, o prazo de entrega do fornecedor e uma margem de segurança. O sistema calcula até quando o estoque dura e o dia certo de fazer o pedido, já descontando o prazo de entrega. Quando a compra chegar, use “Chegou compra” para somar ao saldo.</p>
   ${toolbar("estoque",`<button type="button" class="btn" data-csv="estoque">Exportar planilha</button>`)}
   ${tableView("estoque",[
@@ -993,7 +994,7 @@ V.estoque=()=>{
     {l:"Consumo / dia",r:1,h:x=>x._s.p.c.v?`<span class="num" title="${esc(x._s.p.c.fonte)}">${numFmt(x._s.p.c.v)} ${esc(x.unidade||"")}</span>`:`<span style="color:var(--muted)">—</span>`},
     {l:"Dura até",h:x=>x._s.p.acaba?`<span class="num">${dBR(x._s.p.acaba)}</span> <span style="color:var(--muted);font-size:12.5px">(${Math.floor(x._s.p.dias)} d)</span>`:""},
     {l:"Pedido",h:x=>`<span class="pill ${x._s.cls}">${x._s.txt}</span>`},
-    {l:"Sugestão de compra",r:1,h:x=>x._s.p.sug?`<span class="num">${numFmt(x._s.p.sug)} ${esc(x.unidade||"")}</span>${parseNum(x.custoUnit)?`<div style="font-size:12.5px;color:var(--muted)" class="num">≈ ${money(x._s.p.sug*parseNum(x.custoUnit))}</div>`:""}`:""},
+    {l:"Sugestão de compra",r:1,h:x=>x._s.p.sug?`<span class="num">${numFmt(x._s.p.sug)} ${esc(x.unidade||"")}</span>${parseNum(x.custoUnit)&&can("fin")?`<div style="font-size:12.5px;color:var(--muted)" class="num">≈ ${money(x._s.p.sug*parseNum(x.custoUnit))}</div>`:""}`:""},
     {l:"",h:x=>can("edit")?`<button type="button" class="btn small" data-compra="${esc(x.id)}">Chegou compra</button>`:""}
   ],rows,{vazio:"Nenhum item no estoque."})}`;
 };
@@ -1108,20 +1109,22 @@ V.inseminacao=()=>{
   const tot=rows.reduce((s,r)=>s+custoInsem(r).total,0);const comPotro=rows.filter(r=>r.dataNascPotro);
   const media=rows.length?tot/rows.length:0;
   return `<div class="kpis"><div class="kpi"><span class="lbl">Inseminações</span><span class="val">${rows.length}</span></div>
-   <div class="kpi neg"><span class="lbl">Custo total</span><span class="val">${money(tot)}</span></div>
-   <div class="kpi"><span class="lbl">Custo médio por potro</span><span class="val">${money(media)}</span><span class="hint">${comPotro.length} potros nascidos</span></div></div>
-  <p class="note" style="margin:0 0 12px">Cada linha é uma inseminação. Escolha o pacote de cobertura para puxar o valor da cobertura e o custo das paletas. Depois some fertilização, medicamentos e cada ultrassom. O total é o custo do potro. Os mesmos registros aparecem em Reprodução, onde ficam a gestação, o potro e a genealogia.</p>
+   ${can("fin")?`<div class="kpi neg"><span class="lbl">Custo total</span><span class="val">${money(tot)}</span></div>
+   <div class="kpi"><span class="lbl">Custo médio por potro</span><span class="val">${money(media)}</span><span class="hint">${comPotro.length} potros nascidos</span></div>`:`<div class="kpi"><span class="lbl">Éguas prenhes</span><span class="val">${rows.filter(r=>r.diagnostico==="Prenhe"&&!r.dataNascPotro).length}</span></div><div class="kpi"><span class="lbl">Potros nascidos</span><span class="val">${comPotro.length}</span></div>`}</div>
+  <p class="note" style="margin:0 0 12px"${can("fin")?"":" hidden"}>Cada linha é uma inseminação. Escolha o pacote de cobertura para puxar o valor da cobertura e o custo das paletas. Depois some fertilização, medicamentos e cada ultrassom. O total é o custo do potro. Os mesmos registros aparecem em Reprodução, onde ficam a gestação, o potro e a genealogia.</p>
   ${toolbar("reproducao",`<button type="button" class="btn" data-csv="reproducao">Exportar planilha</button>`)}
   ${tableView("reproducao",[
     {l:"Data",h:x=>`<span class="num">${dBR(x.dataInseminacao)}</span>`,v:x=>dBR(x.dataInseminacao)},
     {l:"",h:x=>`<span style="display:inline-flex;gap:4px">${thumbH(fotoDe(x.doadora,x.fotoDoadora),x.doadora)}${thumbH(fotoDe(x.garanhao,x.fotoGaranhao),x.garanhao)}</span>`},
     {l:"Doadora × Garanhão",h:x=>`<strong>${esc((animalDe(x.doadora)||{}).nome||x.doadora)}</strong> × ${esc((animalDe(x.garanhao)||{}).nome||x.garanhao)}${x.compraId&&S.compras[x.compraId]?`<div style="font-size:12.5px;color:var(--muted)">${esc(S.compras[x.compraId].descricao)}</div>`:""}`,v:x=>x.doadora+" "+x.garanhao,wrap:1},
-    {l:"Cobertura",r:1,h:x=>{const c=custoInsem(x);return `<span class="num">${money(c.cobertura+c.pacote)}</span>${c.pacote?`<div style="font-size:12px;color:var(--muted)">com paletas extras e frete</div>`:""}`}},
-    {l:"Paletas",r:1,h:x=>`<span class="num">${money(custoInsem(x).paletas)}</span>${x.paletas?`<div style="font-size:12px;color:var(--muted)" class="num">${numFmt(x.paletas)} × ${money(x.custoPaleta)}</div>`:""}`},
-    {l:"Vet. / medic.",r:1,h:x=>{const c=custoInsem(x);return `<span class="num">${money(c.fertilizacao+c.medicamentos)}</span>`}},
-    {l:"Ultrassons",r:1,h:x=>`<span class="num">${money(custoInsem(x).ultrassons)}</span>${(x.ultrassons||[]).length?`<div style="font-size:12px;color:var(--muted)">${x.ultrassons.length} exame${x.ultrassons.length>1?"s":""}</div>`:""}`},
-    {l:"Outros",r:1,h:x=>{const c=custoInsem(x);return `<span class="num">${money(c.frete+c.receptora+c.outros)}</span>`}},
-    {l:"Custo do potro",r:1,h:x=>`<strong class="num">${money(custoInsem(x).total)}</strong>`},
+    {l:"Cobertura",r:1,fin:1,h:x=>{const c=custoInsem(x);return `<span class="num">${money(c.cobertura+c.pacote)}</span>${c.pacote?`<div style="font-size:12px;color:var(--muted)">com paletas extras e frete</div>`:""}`}},
+    {l:"Paletas",r:1,fin:1,h:x=>`<span class="num">${money(custoInsem(x).paletas)}</span>${x.paletas?`<div style="font-size:12px;color:var(--muted)" class="num">${numFmt(x.paletas)} × ${money(x.custoPaleta)}</div>`:""}`},
+    {l:"Vet. / medic.",r:1,fin:1,h:x=>{const c=custoInsem(x);return `<span class="num">${money(c.fertilizacao+c.medicamentos)}</span>`}},
+    {l:"Ultrassons",r:1,fin:1,h:x=>`<span class="num">${money(custoInsem(x).ultrassons)}</span>${(x.ultrassons||[]).length?`<div style="font-size:12px;color:var(--muted)">${x.ultrassons.length} exame${x.ultrassons.length>1?"s":""}</div>`:""}`},
+    {l:"Outros",r:1,fin:1,h:x=>{const c=custoInsem(x);return `<span class="num">${money(c.frete+c.receptora+c.outros)}</span>`}},
+    {l:"Custo do potro",r:1,fin:1,h:x=>`<strong class="num">${money(custoInsem(x).total)}</strong>`},
+    {l:"Tipo",soOp:1,k:"tipoCobertura"},{l:"Veterinário",soOp:1,k:"veterinario"},{l:"Receptora",soOp:1,v:x=>x.receptora||"—"},
+    {l:"Parto previsto",soOp:1,h:x=>x.dataNascPotro?`<span class="num">nasceu ${dBR(x.dataNascPotro)}</span>`:partoPrevisto(x)?`<span class="num">${dBR(partoPrevisto(x))}</span>`:""},
     {l:"Situação",h:x=>{const st=statusRepro(x);return `<span class="pill ${st.cls}">${st.txt}</span>`}}
   ],rows,{vazio:"Nenhuma inseminação registrada.",foot:rs=>`<td colspan="8">Total (${rs.length})</td><td class="r num">${money(rs.reduce((s,r)=>s+custoInsem(r).total,0))}</td><td></td>`})}`;
 };
@@ -1217,11 +1220,11 @@ V.configuracoes=()=>{
 
 function usuariosHTML(){
   return `<section class="panel" style="margin-top:16px"><h2>Usuários e perfis</h2>
-   <p class="note" style="margin-top:0">Para criar um acesso: no Supabase, abra <strong>Authentication → Users → Add user</strong>, informe o e-mail e uma senha e marque “Auto Confirm User”. A pessoa aparece aqui como <strong>Usuário</strong>; escolha o perfil dela abaixo. Para tirar o acesso, apague o usuário no Supabase.</p>
+   <p class="note" style="margin-top:0">Para criar um acesso: no Supabase, abra <strong>Authentication → Users → Add user</strong>, informe o e-mail e uma senha e marque “Auto Confirm User”. A pessoa aparece aqui como <strong>Treinador</strong>; escolha o perfil dela abaixo. Para tirar o acesso, apague o usuário no Supabase.</p>
    <div class="tablewrap"><table><thead><tr><th>E-mail</th><th>Nome</th><th>Perfil</th></tr></thead><tbody>
    ${PERFIS.map(p=>`<tr data-user="${esc(p.user_id)}"><td>${esc(p.email)}</td><td><input type="text" data-unome="${esc(p.user_id)}" value="${esc(p.nome||"")}" aria-label="Nome" placeholder="Nome"></td><td><select data-uperfil="${esc(p.user_id)}" aria-label="Perfil"${ME&&p.user_id===ME.id?" disabled":""}>${Object.entries(ROLE_NOME).map(([k,t])=>`<option value="${k}"${p.perfil===k?" selected":""}>${t}</option>`).join("")}</select></td></tr>`).join("")}
    </tbody></table></div>
-   <p class="note"><strong>Administrador:</strong> tudo. <strong>Financeiro:</strong> tudo menos Configurações. <strong>Usuário:</strong> alimentação, animais, cocheiras, estoque, tarefas e reprodução, sem ver o financeiro, as competições e o custo por animal. <strong>Somente leitura:</strong> vê as abas do Usuário sem alterar. O bloqueio também vale no servidor.</p></section>`;
+   <p class="note"><strong>Administrador:</strong> tudo. <strong>Financeiro:</strong> tudo menos Configurações. <strong>Treinador:</strong> alimentação, animais, cocheiras, estoque (o que tem e o que pedir), tarefas, ferrageamento, reprodução e inseminação, sempre <strong>sem nenhum valor em R$</strong>; não vê Entradas e saídas, Competições, Compras parceladas nem Custo por animal. <strong>Somente leitura:</strong> vê o mesmo que o Treinador, sem alterar.</p></section>`;
 }
 function welcome(){
   return `<div class="welcome"><div><div class="ex-flag">Primeiro acesso</div><h2>Bem-vindo ao controle do ${esc(S.cfg.nome)}</h2>
@@ -1329,14 +1332,14 @@ function openCompra(id){
   <form id="mf" novalidate>
     <div class="field"><label for="cQtd">Quantidade recebida (${esc(e.unidade||"")}) *</label><input id="cQtd" type="text" inputmode="decimal"></div>
     <div class="field"><label for="cData">Data</label><input id="cData" type="date" value="${today()}"></div>
-    <div class="field"><label for="cValor">Valor total pago (R$)</label><input id="cValor" type="text" inputmode="decimal" placeholder="0,00"><span class="help">Atualiza o custo por unidade do item.</span></div>
+    ${fin?`<div class="field"><label for="cValor">Valor total pago (R$)</label><input id="cValor" type="text" inputmode="decimal" placeholder="0,00"><span class="help">Atualiza o custo por unidade do item.</span></div>`:""}
     <div class="field"><label for="cForn">Fornecedor</label><input id="cForn" type="text" value="${esc(e.fornecedor||"")}"></div>
     ${fin?`<div class="field check full"><input type="checkbox" id="cLanc" checked><label for="cLanc">Lançar como saída em Entradas e saídas</label></div>`:""}
   </form><footer><div class="right"><button type="button" class="btn" id="mCancel">Cancelar</button><button type="button" class="btn primary" id="mSave">Somar ao estoque</button></div></footer></div></div>`;
   const close=()=>{root.innerHTML=""};$("#mClose").onclick=close;$("#mCancel").onclick=close;$("#mb").addEventListener("mousedown",ev=>{if(ev.target.id==="mb")close()});
   setTimeout(()=>$("#cQtd").focus(),30);
   $("#mSave").onclick=()=>{const q=parseNum($("#cQtd").value);if(!(q>0)){toast("Informe a quantidade recebida");$("#cQtd").focus();return}
-    const v=parseNum($("#cValor").value);const forn=$("#cForn").value.trim();const data=$("#cData").value||today();
+    const v=$("#cValor")?parseNum($("#cValor").value):0;const forn=$("#cForn").value.trim();const data=$("#cData").value||today();
     const novo=Object.assign({},e,{quantidade:Math.round((parseNum(e.quantidade)+q)*1000)/1000,fornecedor:forn||e.fornecedor||"",ultimaCompra:data});if(v>0)novo.custoUnit=Math.round(v/q*100)/100;put("estoque",novo);
     if(fin&&v>0&&$("#cLanc")&&$("#cLanc").checked){const cat=e.categoria;const c=["Ração","Feno","Silagem","Óleo","Suplemento"].includes(cat)?"Compra de alimentos":cat==="Medicamento"?"Medicamentos":cat==="Cama"?"Cama / maravalha":cat==="Ferragem"?"Ferrageamento":"Outras saídas";
       put("lancamentos",{id:uid(),tipo:"Saída",data,categoria:L("saida").includes(c)?c:"Outras saídas",valor:v,descricao:`${numFmt(q)} ${e.unidade||""} de ${e.item}${forn?" · "+forn:""}`,situacao:"Pago",atualizado:new Date().toISOString()})}
