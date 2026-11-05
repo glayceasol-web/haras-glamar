@@ -1095,7 +1095,8 @@ V.configuracoes=()=>{
    </section>
    <section class="panel"><h2>Backup e planilhas</h2>
      <p class="note" style="margin-top:0">${backend==="supa"?"Seus dados ficam salvos no servidor do haras (Supabase). Mesmo assim, baixe um backup de vez em quando.":backend==="db"?"Seus dados ficam salvos na sua conta Claude. Mesmo assim, baixe um backup de vez em quando.":"Seus dados ficam salvos apenas neste navegador. Baixe um backup com frequência."}</p>
-     <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn primary" id="bkExport">Baixar backup completo</button><button type="button" class="btn" id="bkImport">Restaurar backup</button></div>
+     <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn primary" id="bkExport">Baixar backup completo</button><button type="button" class="btn" id="bkImport">Restaurar backup</button><button type="button" class="btn" id="bkMerge">Importar cadastros</button></div>
+     <p class="note" style="margin:8px 0 0">“Restaurar backup” substitui tudo pelo arquivo. “Importar cadastros” só acrescenta ou atualiza os itens do arquivo e mantém o resto.</p>
      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" class="btn small" id="loadSample">Carregar dados de exemplo</button><button type="button" class="btn small danger" id="wipe">Apagar todos os dados</button></div>
    </section>
   </div>
@@ -1196,7 +1197,8 @@ view.addEventListener("click",async e=>{
   if(t.id==="cfgLogo"){$("#logoFile").click();return}
   if(t.id==="cfgLogoDel"){S.cfg.logo="";S.cfg.semLogo=false;putCfg();render();return}
   if(t.id==="bkExport"){exportJSON();return}
-  if(t.id==="bkImport"){$("#importFile").click();return}
+  if(t.id==="bkImport"){window.__merge=false;$("#importFile").click();return}
+  if(t.id==="bkMerge"){window.__merge=true;$("#importFile").click();return}
   if(t.id==="loadSample"||t.id==="wSample"){loadSample();return}
   if(t.id==="wEmpty"){S.cfg.iniciado=true;putCfg();location.hash="#animais";go();toast("Comece cadastrando seus animais e cocheiras");return}
   if(t.id==="wipe"){if(!t.classList.contains("armed")){t.classList.add("armed");t.textContent="Clique de novo para apagar tudo";setTimeout(()=>{if(t.isConnected){t.classList.remove("armed");t.textContent="Apagar todos os dados"}},5000);return}wipeAll();return}
@@ -1250,7 +1252,7 @@ function exportCSV(col){
 }
 function exportCustoCSV(){const c=custoPorAnimal();const lines=[["Animal","Cocheira","Alimentação","Despesas diretas","Rateio geral","Competições","Custo total","Receitas","Resultado"].join(";")];c.linhas.forEach(l=>lines.push([l.animal.nome,cocheiraNome(l.animal.cocheira),l.alim,l.direto,l.rateio,l.comp,l.total,l.receita,l.resultado].map((v,i)=>i<2?csvCell(v):csvNum(v)).join(";")));offerFile(`glamar-custo-por-animal-${UI.modo==="tudo"?"completo":UI.mes}.csv`,"﻿"+lines.join("\r\n"))}
 function exportJSON(){const o={app:"controle-haras-glamar",versao:1,exportadoEm:new Date().toISOString(),cfg:S.cfg};COLS.forEach(c=>o[c]=arr(c));offerFile(`backup-haras-glamar-${today()}.json`,JSON.stringify(o,null,1))}
-$("#importFile").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const o=JSON.parse(rd.result);if(!o||o.app!=="controle-haras-glamar")throw 0;replaceAll(o);toast("Backup restaurado")}catch(err){toast("Esse arquivo não é um backup deste sistema")}};rd.readAsText(f)});
+$("#importFile").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const o=JSON.parse(rd.result);if(!o||o.app!=="controle-haras-glamar")throw 0;if(window.__merge){let n=0;COLS.forEach(c=>(o[c]||[]).forEach(x=>{if(x&&x.id){put(c,Object.assign({},S[c][x.id]||{},x));n++}}));render();toast(n+" cadastros importados")}else{replaceAll(o);toast("Backup restaurado")}}catch(err){toast("Esse arquivo não é um backup deste sistema")}};rd.readAsText(f)});
 function replaceAll(o){
   COLS.forEach(c=>Object.keys(S[c]).forEach(id=>{if(!(o[c]||[]).some(x=>x.id===id))del(c,id)}));
   if(o.cfg){S.cfg=mergeCfg(o.cfg);S.cfg.iniciado=true;putCfg()}
