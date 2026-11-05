@@ -387,6 +387,8 @@ async function startSupa(user){
     clearTimeout(window.__rt);window.__rt=setTimeout(render,150)}).subscribe();
   window.addEventListener("focus",()=>{clearTimeout(window.__rf);window.__rf=setTimeout(()=>loadSupa(),400)});
 }
+window.addEventListener("unhandledrejection",e=>{const b=document.getElementById("pendImport");if(b&&b.disabled){b.disabled=false;b.textContent="Tentar de novo";toast("Erro ao gravar: "+((e.reason&&e.reason.message)||e.reason))}});
+window.addEventListener("error",e=>{const b=document.getElementById("pendImport");if(b&&b.disabled){b.disabled=false;b.textContent="Tentar de novo";toast("Erro ao gravar: "+e.message)}});
 async function loadSupa(){
   const all=[];for(let from=0;;from+=1000){let r;try{r=await SB.from("registros").select("colecao,id,dados").range(from,from+999)}catch(e){r={error:e}}if(r.error){setSync("warn","Sem conexão com o banco. Os dados na tela podem estar desatualizados.");if(UI.loaded){render();return}break}all.push(...r.data);if(r.data.length<1000)break}
   COLS.forEach(c=>S[c]={});
@@ -1372,18 +1374,19 @@ view.addEventListener("click",async e=>{
   if(t.id==="bkExport"){exportJSON();return}
   if(t.id==="bkImport"){window.__merge=false;$("#importFile").click();return}
   if(t.id==="pendImport"&&PEND){const P=PEND;t.disabled=true;t.textContent="Gravando…";const itens=[];COLS.forEach(c=>(P[c]||[]).forEach(x=>{if(x&&x.id)itens.push([c,x])}));const erros=[];
-    for(const [c,x] of itens){if(x._parcial&&!S[c][x.id])continue;const obj=clean(Object.assign({},S[c][x.id]||{},x));delete obj._parcial;
-      if(backend==="supa"){let r;for(let tent=0;tent<4;tent++){try{r=await SB.from("registros").upsert({colecao:c,id:obj.id,dados:obj})}catch(e){r={error:e}}if(!r.error)break;t.textContent=`Gravando… (nova tentativa ${tent+1})`;await new Promise(ok=>setTimeout(ok,1500*(tent+1)))}
+    const comPrazo=pr=>Promise.race([pr,new Promise(ok=>setTimeout(()=>ok({error:{message:"sem resposta do banco (tempo esgotado)"}}),20000))]);let nItem=0;
+    for(const [c,x] of itens){nItem++;t.textContent=`Gravando ${nItem} de ${itens.length}…`;if(x._parcial&&!S[c][x.id])continue;const obj=clean(Object.assign({},S[c][x.id]||{},x));delete obj._parcial;
+      if(backend==="supa"){let r;for(let tent=0;tent<4;tent++){try{r=await comPrazo(SB.from("registros").upsert({colecao:c,id:obj.id,dados:obj}))}catch(e){r={error:e}}if(!r.error)break;t.textContent=`Gravando ${nItem} de ${itens.length}… (nova tentativa ${tent+1})`;await new Promise(ok=>setTimeout(ok,1500*(tent+1)))}
         if(r.error){const m=String(r.error.message||r.error);erros.push(`${x.nome||x.item||x.descricao||x.nomePotro||obj.id}: ${/fetch|network|Load failed/i.test(m)?"sem conexão com o banco":m}`)}else S[c][obj.id]=obj}else put(c,obj)}
     for(const m of (P.atualizarPor||[])){const alvo=arr(m.col).filter(r=>Object.keys(m.match).every(k=>{const a1=animalDe(r[k]),a2=animalDe(m.match[k]);return a1&&a2?a1.id===a2.id:nNome(r[k]||"")===nNome(m.match[k])}));
-      for(const r0 of alvo){const obj=clean(Object.assign({},r0,m.dados));if(backend==="supa"){let r;for(let tent=0;tent<4;tent++){try{r=await SB.from("registros").upsert({colecao:m.col,id:obj.id,dados:obj})}catch(e){r={error:e}}if(!r.error)break;await new Promise(ok=>setTimeout(ok,1500*(tent+1)))}if(r.error)erros.push(`${obj.nomePotro||obj.id}: ${String(r.error.message||r.error)}`);else S[m.col][obj.id]=obj}else put(m.col,obj)}}
+      for(const r0 of alvo){const obj=clean(Object.assign({},r0,m.dados));if(backend==="supa"){let r;for(let tent=0;tent<4;tent++){try{r=await comPrazo(SB.from("registros").upsert({colecao:m.col,id:obj.id,dados:obj}))}catch(e){r={error:e}}if(!r.error)break;await new Promise(ok=>setTimeout(ok,1500*(tent+1)))}if(r.error)erros.push(`${obj.nomePotro||obj.id}: ${String(r.error.message||r.error)}`);else S[m.col][obj.id]=obj}else put(m.col,obj)}}
     for(const m of (P.mesclar||[])){const mine=S[m.col]&&S[m.col][m.id];if(!mine)continue;const ida=r=>[(animalDe(r.doadora)||{}).id||nNome(r.doadora),(animalDe(r.garanhao)||{}).id||nNome(r.garanhao)].join("|");
       const outros=arr(m.col).filter(r=>r.id!==m.id&&ida(r)===ida(mine));if(outros.length!==1)continue;const o=outros[0];const junto=Object.assign({},o);
       Object.keys(mine).forEach(k=>{if(["id","obs","dataInseminacao","atualizado"].includes(k))return;const v=o[k];if(v===undefined||v===null||v===""||(typeof v==="object"&&!Array.isArray(v)&&pedVazio(v)))junto[k]=mine[k]});
       if(!o.dataInseminacao)junto.dataInseminacao=mine.dataInseminacao;
       if(backend==="supa"){const r1=await SB.from("registros").upsert({colecao:m.col,id:o.id,dados:clean(junto)});if(r1.error){erros.push("Juntar registros: "+r1.error.message);continue}const r2=await SB.from("registros").delete().eq("colecao",m.col).eq("id",m.id);if(r2.error)erros.push("Apagar duplicado: "+r2.error.message)}
       else{put(m.col,junto);del(m.col,m.id)}}
-    if(backend==="supa")await loadSupa();
+    t.textContent="Conferindo…";if(backend==="supa")await loadSupa();
     const faltam=itens.filter(([c,x])=>!S[c][x.id]||(x.foto&&S[c][x.id].foto!==x.foto)).map(([c,x])=>x.nome||x.item||x.descricao||x.nomePotro||x.id);
     if(erros.length||faltam.length){P.erro=(erros.length?erros.join(" · "):"Não ficaram gravados: "+faltam.join(", "));PEND=P;render();toast("Alguns itens não foram gravados. Veja o aviso no Painel.");return}
     S.cfg.loteImportado=P.lote;S.cfg.iniciado=true;putCfg();PEND=null;render();toast(itens.length+" itens gravados e conferidos");return}
