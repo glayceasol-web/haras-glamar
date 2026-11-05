@@ -1,4 +1,4 @@
-// Dados do projeto Supabase do Haras GLAMAR (Project Settings → API).
+// Dados do projeto Supabase do CTE GLAMAR (Project Settings → API).
 // Esta é a chave "anon public", feita para ficar no site. Nunca coloque aqui a chave "service_role" ou "secret".
 window.HARAS_CONFIG = {
   supabaseUrl: "https://oapjjmawsdezahdbmlnf.supabase.co",

@@ -1,4 +1,4 @@
-# Haras GLAMAR · site próprio (Vercel + Supabase)
+# CTE GLAMAR · site próprio (Vercel + Supabase)
 
 ## 1. Supabase (banco de dados e login)
 1. Crie o projeto `haras-glamar` (região São Paulo).
