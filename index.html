@@ -386,7 +386,7 @@ async function loadSupa(){
 }
 let PEND=null;
 function pendHTML(){if(!PEND||UI.view!=="painel")return"";const n=(PEND.animais||[]).length;const novos=(PEND.animais||[]).filter(a=>!S.animais[a.id]).length;
-  return `<div class="card" style="margin-bottom:16px;border:1px solid var(--accent)"><h3 style="margin:0 0 6px">${esc(PEND.titulo||"Cadastros prontos para entrar no sistema")}</h3><p style="margin:0 0 10px">${PEND.texto?esc(PEND.texto):`${n} animais com fotos e genealogia (${novos} novos), preparados a partir das fichas de registro.`} Confira e clique para incluir. Nada do que já está lançado é apagado.</p><p style="margin:0 0 10px;font-size:13.5px;color:var(--muted)">${[...(PEND.animais||[]).map(a=>a.nome),...(PEND.reproducao||[]).map(r=>"Reprodução: "+(r.nomePotro||r.doadora)),...(PEND.estoque||[]).map(e=>"Estoque: "+e.item),...(PEND.cocheiras||[]).map(c=>"Estrutura: "+c.nome),...(PEND.lancamentos||[]).map(l=>"Saída: "+(l.descricao||l.categoria))].map(esc).join(" · ")}</p>${PEND.erro?`<p style="margin:0 0 10px;color:var(--neg,#b42318)"><strong>Erro ao gravar:</strong> ${esc(PEND.erro)}</p>`:""}<button type="button" class="btn primary" id="pendImport">${PEND.erro?"Tentar de novo":"Incluir no sistema"}</button> <button type="button" class="btn" id="pendLater">Agora não</button></div>`}
+  return `<div class="card" style="margin-bottom:16px;border:1px solid var(--accent)"><h3 style="margin:0 0 6px">${esc(PEND.titulo||"Cadastros prontos para entrar no sistema")}</h3><p style="margin:0 0 10px">${PEND.texto?esc(PEND.texto):`${n} animais com fotos e genealogia (${novos} novos), preparados a partir das fichas de registro.`} Confira e clique para incluir. Nada do que já está lançado é apagado.</p><p style="margin:0 0 10px;font-size:13.5px;color:var(--muted)">${[...(PEND.animais||[]).map(a=>a.nome),...(PEND.reproducao||[]).map(r=>"Reprodução: "+(r.nomePotro||r.doadora)),...(PEND.estoque||[]).map(e=>"Estoque: "+e.item),...(PEND.cocheiras||[]).map(c=>"Estrutura: "+c.nome),...(PEND.mesclar||[]).map(m=>m.rotulo||"Juntar registros repetidos"),...(PEND.lancamentos||[]).map(l=>"Saída: "+(l.descricao||l.categoria))].map(esc).join(" · ")}</p>${PEND.erro?`<p style="margin:0 0 10px;color:var(--neg,#b42318)"><strong>Erro ao gravar:</strong> ${esc(PEND.erro)}</p>`:""}<button type="button" class="btn primary" id="pendImport">${PEND.erro?"Tentar de novo":"Incluir no sistema"}</button> <button type="button" class="btn" id="pendLater">Agora não</button></div>`}
 function showLogin(modo){
   let el=$("#loginBox");if(!el){el=document.createElement("div");el.id="loginBox";document.body.appendChild(el)}
   const conv=modo==="convite";if(conv)modo="nova";
@@ -732,7 +732,8 @@ function openForm(col,id,preset){
       const ln=(a,b,cls="")=>`<div class="ln ${cls}"><span>${a}</span><span class="num">${b}</span></div>`;
       box.innerHTML=`<span class="t">Custo deste potro</span>`+[["Cobertura",c.cobertura],[`Paletas (${numFmt(cur.paletas)} × ${money(cur.custoPaleta)})`,c.paletas],["Frete do sêmen",c.frete],["Fertilização",c.fertilizacao],["Medicamentos",c.medicamentos],["Receptora",c.receptora],[`Ultrassons (${(cur.ultrassons||[]).length})`,c.ultrassons],["Outros",c.outros]].filter(x=>x[1]).map(x=>ln(x[0],money(x[1]))).join("")+ln("Total",money(c.total),"tot")};
     calc();form.addEventListener("input",calc);form.addEventListener("change",calc);form.addEventListener("click",e=>{if(e.target.closest("[data-subdel],[data-subadd]"))setTimeout(calc,0)})}
-  if(col==="reproducao"){const pre=(campo,ped)=>{const a=animalDe(form.elements[campo].value);if(a&&a.nome!==form.elements[campo].value)form.elements[campo].value=a.nome;const g=a&&!pedVazio(a.genealogia)?a.genealogia:null;if(!g)return;const vazio=PED_KEYS.every(([k])=>!form.elements[ped+"__"+k].value.trim());if(vazio)PED_KEYS.forEach(([k])=>{form.elements[ped+"__"+k].value=g[k]||""})};
+  if(col==="reproducao"){const pre=(campo,ped)=>{const a=animalDe(form.elements[campo].value);if(a&&a.nome!==form.elements[campo].value)form.elements[campo].value=a.nome;
+    const fk=campo==="doadora"?"fotoDoadora":"fotoGaranhao";const box=form.querySelector(`[data-foto="${fk}"] .foto-prev`);if(box&&form.elements[fk]&&!form.elements[fk].value){box.innerHTML=a&&a.foto?`<img src="${esc(a.foto)}" alt=""><span class="help" style="position:absolute;left:6px;bottom:4px;background:rgba(0,0,0,.6);color:#fff;padding:1px 6px;border-radius:6px;font-size:11px">da ficha em Animais</span>`:`<span>Sem foto</span>`;box.style.position="relative"}const g=a&&!pedVazio(a.genealogia)?a.genealogia:null;if(!g)return;const vazio=PED_KEYS.every(([k])=>!form.elements[ped+"__"+k].value.trim());if(vazio)PED_KEYS.forEach(([k])=>{form.elements[ped+"__"+k].value=g[k]||""})};
     form.elements.doadora.addEventListener("change",()=>pre("doadora","genealogiaDoadora"));form.elements.garanhao.addEventListener("change",()=>pre("garanhao","genealogiaGaranhao"));pre("doadora","genealogiaDoadora");pre("garanhao","genealogiaGaranhao")}
   if(col==="competicoes"){const upd=()=>{const cur=Object.assign({},rec,readForm(form,m.fields));let box=form.querySelector(".calc");if(!box){form.insertAdjacentHTML("beforeend",'<div class="calc"></div>');box=form.querySelector(".calc")}box.innerHTML=calcHTML(cur)};upd();form.addEventListener("input",upd);form.addEventListener("change",upd);form.addEventListener("click",e=>{if(e.target.closest("[data-subdel],[data-subadd]"))setTimeout(upd,0)})}
   const firstInput=form.querySelector("input,select,textarea");if(firstInput)setTimeout(()=>firstInput.focus(),30);
@@ -1084,7 +1085,8 @@ V.inseminacao=()=>{
   ${toolbar("reproducao",`<button type="button" class="btn" data-csv="reproducao">Exportar planilha</button>`)}
   ${tableView("reproducao",[
     {l:"Data",h:x=>`<span class="num">${dBR(x.dataInseminacao)}</span>`,v:x=>dBR(x.dataInseminacao)},
-    {l:"Doadora × Garanhão",h:x=>`<strong>${esc(x.doadora)}</strong> × ${esc(x.garanhao)}${x.compraId&&S.compras[x.compraId]?`<div style="font-size:12.5px;color:var(--muted)">${esc(S.compras[x.compraId].descricao)}</div>`:""}`,v:x=>x.doadora+" "+x.garanhao,wrap:1},
+    {l:"",h:x=>`<span style="display:inline-flex;gap:4px">${thumbH(fotoDe(x.doadora,x.fotoDoadora),x.doadora)}${thumbH(fotoDe(x.garanhao,x.fotoGaranhao),x.garanhao)}</span>`},
+    {l:"Doadora × Garanhão",h:x=>`<strong>${esc((animalDe(x.doadora)||{}).nome||x.doadora)}</strong> × ${esc((animalDe(x.garanhao)||{}).nome||x.garanhao)}${x.compraId&&S.compras[x.compraId]?`<div style="font-size:12.5px;color:var(--muted)">${esc(S.compras[x.compraId].descricao)}</div>`:""}`,v:x=>x.doadora+" "+x.garanhao,wrap:1},
     {l:"Cobertura",r:1,h:x=>`<span class="num">${money(custoInsem(x).cobertura)}</span>`},
     {l:"Paletas",r:1,h:x=>`<span class="num">${money(custoInsem(x).paletas)}</span>${x.paletas?`<div style="font-size:12px;color:var(--muted)" class="num">${numFmt(x.paletas)} × ${money(x.custoPaleta)}</div>`:""}`},
     {l:"Vet. / medic.",r:1,h:x=>{const c=custoInsem(x);return `<span class="num">${money(c.fertilizacao+c.medicamentos)}</span>`}},
@@ -1092,7 +1094,7 @@ V.inseminacao=()=>{
     {l:"Outros",r:1,h:x=>{const c=custoInsem(x);return `<span class="num">${money(c.frete+c.receptora+c.outros)}</span>`}},
     {l:"Custo do potro",r:1,h:x=>`<strong class="num">${money(custoInsem(x).total)}</strong>`},
     {l:"Situação",h:x=>{const st=statusRepro(x);return `<span class="pill ${st.cls}">${st.txt}</span>`}}
-  ],rows,{vazio:"Nenhuma inseminação registrada.",foot:rs=>`<td colspan="7">Total (${rs.length})</td><td class="r num">${money(rs.reduce((s,r)=>s+custoInsem(r).total,0))}</td><td></td>`})}`;
+  ],rows,{vazio:"Nenhuma inseminação registrada.",foot:rs=>`<td colspan="8">Total (${rs.length})</td><td class="r num">${money(rs.reduce((s,r)=>s+custoInsem(r).total,0))}</td><td></td>`})}`;
 };
 V.compras=()=>{
   const rows=arr("compras").sort((a,b)=>String(b.dataCompra||"").localeCompare(a.dataCompra||""));
@@ -1271,6 +1273,12 @@ view.addEventListener("click",async e=>{
     for(const [c,x] of itens){const obj=clean(Object.assign({},S[c][x.id]||{},x));
       if(backend==="supa"){let r;for(let tent=0;tent<4;tent++){try{r=await SB.from("registros").upsert({colecao:c,id:obj.id,dados:obj})}catch(e){r={error:e}}if(!r.error)break;t.textContent=`Gravando… (nova tentativa ${tent+1})`;await new Promise(ok=>setTimeout(ok,1500*(tent+1)))}
         if(r.error){const m=String(r.error.message||r.error);erros.push(`${x.nome||x.item||x.descricao||x.nomePotro||obj.id}: ${/fetch|network|Load failed/i.test(m)?"sem conexão com o banco":m}`)}else S[c][obj.id]=obj}else put(c,obj)}
+    for(const m of (P.mesclar||[])){const mine=S[m.col]&&S[m.col][m.id];if(!mine)continue;const ida=r=>[(animalDe(r.doadora)||{}).id||nNome(r.doadora),(animalDe(r.garanhao)||{}).id||nNome(r.garanhao)].join("|");
+      const outros=arr(m.col).filter(r=>r.id!==m.id&&ida(r)===ida(mine));if(outros.length!==1)continue;const o=outros[0];const junto=Object.assign({},o);
+      Object.keys(mine).forEach(k=>{if(["id","obs","dataInseminacao","atualizado"].includes(k))return;const v=o[k];if(v===undefined||v===null||v===""||(typeof v==="object"&&!Array.isArray(v)&&pedVazio(v)))junto[k]=mine[k]});
+      if(!o.dataInseminacao)junto.dataInseminacao=mine.dataInseminacao;
+      if(backend==="supa"){const r1=await SB.from("registros").upsert({colecao:m.col,id:o.id,dados:clean(junto)});if(r1.error){erros.push("Juntar registros: "+r1.error.message);continue}const r2=await SB.from("registros").delete().eq("colecao",m.col).eq("id",m.id);if(r2.error)erros.push("Apagar duplicado: "+r2.error.message)}
+      else{put(m.col,junto);del(m.col,m.id)}}
     if(backend==="supa")await loadSupa();
     const faltam=itens.filter(([c,x])=>!S[c][x.id]||(x.foto&&S[c][x.id].foto!==x.foto)).map(([c,x])=>x.nome||x.item||x.descricao||x.nomePotro||x.id);
     if(erros.length||faltam.length){P.erro=(erros.length?erros.join(" · "):"Não ficaram gravados: "+faltam.join(", "));PEND=P;render();toast("Alguns itens não foram gravados. Veja o aviso no Painel.");return}
