@@ -332,6 +332,7 @@ async function startSupa(user){
   ME=user;hideLogin();setSync("","Carregando…");
   const pr=await SB.from("perfis").select("*").eq("user_id",user.id).maybeSingle();
   ROLE=(pr.data&&pr.data.perfil)||"leitura";USERNAME=(pr.data&&pr.data.nome)||user.email;
+  if(pr.error||!pr.data){setTimeout(()=>toast(pr.error?"O banco ainda não foi configurado: rode o script supabase-setup.sql no Supabase.":"Seu usuário está sem perfil. Rode o script supabase-setup.sql no Supabase e entre de novo."),800)}
   if(!viewOk(UI.view))UI.view="painel";
   await loadSupa();
   SB.channel("registros").on("postgres_changes",{event:"*",schema:"public",table:"registros"},pl=>{
