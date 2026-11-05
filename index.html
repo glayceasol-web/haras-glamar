@@ -170,6 +170,11 @@ tfoot td{font-weight:700;background:var(--surface-2);border-top:2px solid var(--
 .foto-prev{width:150px;aspect-ratio:4/3;max-width:100%;border-radius:10px;overflow:hidden;background:var(--surface-2);border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px}
 .foto-prev img{width:100%;height:100%;object-fit:cover}
 .foto-acts{display:flex;flex-direction:column;gap:6px;align-items:flex-start;flex:1 1 180px;min-width:0}
+.form-sec{grid-column:1/-1;font-size:16px;margin:8px 0 -4px;padding-top:12px;border-top:1px solid var(--line);color:var(--accent)}
+.parc{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px 12px;align-items:center;font-size:14px}
+.parc .pg{color:var(--pos)} .parc .at{color:var(--neg)}
+.cons{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px;margin-top:12px}
+.ped .cell.comum{outline:2px solid var(--warn);outline-offset:-1px}
 .foto-acts label.btn{text-transform:none;letter-spacing:0;color:var(--ink);font-size:13px;cursor:pointer}
 .ped-wrap{overflow-x:auto;grid-column:1/-1}
 .ped{display:grid;grid-template-columns:repeat(3,minmax(170px,1fr));grid-template-rows:repeat(8,auto);gap:4px 8px;min-width:540px}
@@ -296,7 +301,7 @@ const DEFAULT_CFG={
   nome:"Haras GLAMAR", logo:"", rateio:true, iniciado:false,
   listas:{
     entrada:["Hospedagem","Treinamento","Venda de animal","Cobertura / sêmen","Aulas","Prêmios","Outras entradas"],
-    saida:["Compra de alimentos","Veterinário","Medicamentos","Ferrageamento","Funcionários","Energia e água","Manutenção","Combustível","Cama / maravalha","Competições","Reprodução","Impostos e taxas","Outras saídas"],
+    saida:["Compra de alimentos","Veterinário","Medicamentos","Ferrageamento","Funcionários","Energia e água","Manutenção","Combustível","Cama / maravalha","Competições","Reprodução","Compras parceladas","Impostos e taxas","Outras saídas"],
     naoRatear:["Compra de alimentos"],
     alimento:["Ração","Feno","Silagem","Capim / pastagem","Suplemento","Sal mineral","Óleo","Outros"],
     unidade:["kg","fardo","saco","L","ton","g","un"],
@@ -309,7 +314,7 @@ const DEFAULT_CFG={
   }
 };
 const LIST_LABELS={entrada:"Categorias de entrada",saida:"Categorias de saída",naoRatear:"Saídas que NÃO entram no rateio do custo por animal",alimento:"Tipos de alimento",unidade:"Unidades de medida",estoqueCat:"Categorias de estoque",tarefa:"Tipos de tarefa",pagamento:"Formas de pagamento",categoriaAnimal:"Categorias de animal",tipoCocheira:"Tipos de cocheira / área",competicaoCat:"Categorias de competição"};
-const COLS=["animais","cocheiras","lancamentos","alimentacao","estoque","tarefas","competicoes","reproducao"];
+const COLS=["animais","cocheiras","lancamentos","alimentacao","estoque","tarefas","competicoes","reproducao","compras"];
 
 /* ---------- estado ---------- */
 const S={cfg:JSON.parse(JSON.stringify(DEFAULT_CFG))};COLS.forEach(c=>S[c]={});
@@ -412,7 +417,7 @@ async function initStore(){
   setSync("warn","Salvo neste navegador");render();
 }
 function subscribeDb(){
-  const cols=COLS.filter(c=>can("fin")||!["lancamentos","competicoes"].includes(c));
+  const cols=COLS.filter(c=>can("fin")||!["lancamentos","competicoes","compras"].includes(c));
   let pending=cols.length+1, timer=setTimeout(()=>{if(!UI.loaded){UI.loaded=true;setSync("warn","Sem conexão com o banco ainda");render()}},10000);
   const done=snapOk=>{if(snapOk&&pending>0){pending--;if(pending===0){clearTimeout(timer);UI.loaded=true;setSync("ok","Salvo na nuvem");}}render()};
   const seen={};
@@ -602,9 +607,17 @@ const MOD={
     {k:"tipoCobertura",l:"Tipo de cobertura",t:"select",opts:opt(()=>["Inseminação artificial","Transferência de embrião","Monta natural","Monta controlada"]),def:"Inseminação artificial"},
     {k:"dataInseminacao",l:"Data da inseminação / cobertura",t:"date",req:1,def:today},
     {k:"receptora",l:"Receptora",t:"text",sugg:()=>arr("animais").filter(a=>a.sexo==="Fêmea").map(a=>a.nome),ph:"Nome da égua receptora",help:"Deixe em branco se a própria doadora for gestar."},
-    {k:"paletas",l:"Paletas / doses de sêmen",t:"number",help:"Quantidade usada nesta cobertura."},
     {k:"veterinario",l:"Veterinário",t:"text"},
-    {k:"custo",l:"Custo da cobertura (R$)",t:"money",help:"Sêmen, frete, veterinário, receptora…"},
+    {k:"compraId",l:"Cobertura do pacote",t:"select",fin:1,secao:"Custos da inseminação",opts:()=>[{v:"",t:"— Avulsa / sem pacote —"},...arr("compras").filter(c=>c.tipo==="Pacote de coberturas").map(c=>({v:c.id,t:`${c.descricao}${c.garanhao?" · "+c.garanhao:""}`}))],help:"Puxa o valor de cada cobertura, as paletas e o custo da paleta."},
+    {k:"valorCobertura",l:"Valor da cobertura (R$)",t:"money",fin:1,help:"Com pacote: valor total ÷ nº de coberturas."},
+    {k:"paletas",l:"Paletas usadas",t:"number",help:"Ex.: 5 paletas por cobertura."},
+    {k:"custoPaleta",l:"Custo por paleta (R$)",t:"money",fin:1,help:"Retirada / congelamento. Ex.: R$ 60."},
+    {k:"freteSemen",l:"Frete / envio do sêmen (R$)",t:"money",fin:1},
+    {k:"custoFertilizacao",l:"Fertilização pela veterinária (R$)",t:"money",fin:1},
+    {k:"custoMedicamentos",l:"Medicamentos (R$)",t:"money",fin:1,help:"Se for necessário."},
+    {k:"custoReceptora",l:"Receptora (R$)",t:"money",fin:1,help:"Aluguel ou compra da receptora, se houver."},
+    {k:"ultrassons",l:"Ultrassons",t:"list",full:1,fin:1,sub:[{k:"data",l:"Data",ph:"dd/mm/aaaa"},{k:"motivo",l:"Motivo",ph:"Ex.: diagnóstico 14 dias"},{k:"valor",l:"Valor (R$)",money:1,ph:"0,00"},{k:"vet",l:"Veterinário",ph:"Nome"}]},
+    {k:"custo",l:"Outros custos (R$)",t:"money",fin:1},
     {k:"dataDiagnostico",l:"Data do diagnóstico de prenhez",t:"date"},
     {k:"diagnostico",l:"Resultado do diagnóstico",t:"select",opts:opt(()=>["Aguardando","Prenhe","Vazia","Perda gestacional"]),def:"Aguardando"},
     {k:"dataNascPotro",l:"Data de nascimento do potro",t:"date",help:"Parto previsto: cerca de 340 dias após a cobertura."},
@@ -617,6 +630,20 @@ const MOD={
     {k:"numeroRegistro",l:"Número de registro",t:"text"},
     {k:"chip",l:"Nº do chip",t:"text"},
     {k:"registroDefinitivo",l:"Registro definitivo",t:"text",ph:"Número ou data"},
+    {k:"obs",l:"Observações",t:"textarea",full:1}]},
+  compras:{titulo:"Compras parceladas",singular:"compra",fields:[
+    {k:"descricao",l:"Descrição",t:"text",req:1,full:1,ph:"Ex.: Pacote 3 coberturas Okane da Muralha Verde"},
+    {k:"tipo",l:"Tipo",t:"select",opts:opt(()=>["Pacote de coberturas","Animal","Embrião","Sêmen","Equipamento","Outro"]),def:"Pacote de coberturas"},
+    {k:"vendedor",l:"Vendedor / haras",t:"text"},
+    {k:"garanhao",l:"Garanhão",t:"text",help:"Para pacotes de cobertura e sêmen."},
+    {k:"qtdCoberturas",l:"Nº de coberturas no pacote",t:"number"},
+    {k:"paletasPorCobertura",l:"Paletas por cobertura",t:"number",help:"Ex.: 5"},
+    {k:"custoPaleta",l:"Custo por paleta (R$)",t:"money",help:"Retirada / congelamento. Ex.: 60"},
+    {k:"valorTotal",l:"Valor total (R$)",t:"money",req:1},
+    {k:"entrada",l:"Entrada (R$)",t:"money"},
+    {k:"nParcelas",l:"Nº de parcelas",t:"number",req:1,def:"1"},
+    {k:"primeiraParcela",l:"Vencimento da 1ª parcela",t:"date",req:1},
+    {k:"dataCompra",l:"Data da compra",t:"date",def:today},
     {k:"obs",l:"Observações",t:"textarea",full:1}]},
   tarefas:{titulo:"Tarefas e manejo",singular:"tarefa",fields:[
     {k:"data",l:"Data",t:"date",req:1,def:today},
@@ -649,7 +676,7 @@ function fieldHTML(f,val,form){
 }
 let subSeq=0;
 function subRowHTML(f,r){r=r||{};subSeq++;return `<div class="subrow">${f.sub.map(x=>`<input type="text" data-sk="${x.k}" id="sub_${f.k}_${subSeq}_${x.k}" aria-label="${esc(x.l)}" placeholder="${esc(x.ph||x.l)}"${x.money?' inputmode="decimal"':""} value="${esc(x.money&&r[x.k]!==undefined&&r[x.k]!==""?String(r[x.k]).replace(".",","):r[x.k]??"")}">`).join("")}<button type="button" class="btn small ghost" data-subdel aria-label="Remover item">✕</button></div>`}
-function readForm(form,fields){const o={};fields.forEach(f=>{if(f.t==="pedigree"){const g={};PED_KEYS.forEach(([k])=>{const el=form.elements[f.k+"__"+k];if(el&&el.value.trim())g[k]=el.value.trim()});o[f.k]=g;return}if(f.t==="foto"){o[f.k]=form.elements[f.k]?form.elements[f.k].value:"";return}if(f.t==="list"){const box=form.querySelector(`[data-list="${f.k}"]`);o[f.k]=box?[...box.querySelectorAll(".subrow")].map(row=>{const r={};f.sub.forEach(x=>{const v=row.querySelector(`[data-sk="${x.k}"]`).value.trim();r[x.k]=x.money?(v===""?"":parseNum(v)):v});return r}).filter(r=>f.sub.some(x=>r[x.k]!==""&&r[x.k]!==undefined)):[];return}const el=form.elements[f.k];if(!el)return;let v=el.value;if(f.t==="money"||f.t==="number")v=v.trim()===""?"":parseNum(v);else v=v.trim();o[f.k]=v});return o}
+function readForm(form,fields){const o={};fields.forEach(f=>{if(f.fin&&!can("fin"))return;if(f.t==="pedigree"){const g={};PED_KEYS.forEach(([k])=>{const el=form.elements[f.k+"__"+k];if(el&&el.value.trim())g[k]=el.value.trim()});o[f.k]=g;return}if(f.t==="foto"){o[f.k]=form.elements[f.k]?form.elements[f.k].value:"";return}if(f.t==="list"){const box=form.querySelector(`[data-list="${f.k}"]`);o[f.k]=box?[...box.querySelectorAll(".subrow")].map(row=>{const r={};f.sub.forEach(x=>{const v=row.querySelector(`[data-sk="${x.k}"]`).value.trim();r[x.k]=x.money?(v===""?"":parseNum(v)):v});return r}).filter(r=>f.sub.some(x=>r[x.k]!==""&&r[x.k]!==undefined)):[];return}const el=form.elements[f.k];if(!el)return;let v=el.value;if(f.t==="money"||f.t==="number")v=v.trim()===""?"":parseNum(v);else v=v.trim();o[f.k]=v});return o}
 
 function openForm(col,id,preset){
   const m=MOD[col];const rec=id?Object.assign({},S[col][id]):Object.assign({},preset||{});
@@ -657,7 +684,7 @@ function openForm(col,id,preset){
   const root=$("#modalRoot");
   root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"${m.fields.some(f=>f.t==="pedigree")?' style="width:min(880px,100%)"':""}>
     <header><h2 id="mt">${id?"Editar":"Novo"} ${esc(m.singular)}</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
-    <form id="mf" novalidate>${m.fields.map(f=>fieldHTML(f,rec[f.k],rec)).join("")}</form>
+    <form id="mf" novalidate>${m.fields.filter(f=>!f.fin||can("fin")).map(f=>(f.secao?`<h3 class="form-sec">${esc(f.secao)}</h3>`:"")+fieldHTML(f,rec[f.k],rec)).join("")}</form>
     <footer>${id&&can("edit")?`<button type="button" class="btn danger" id="mDel">Excluir</button>`:""}<div class="right"><button type="button" class="btn" id="mCancel">${can("edit")?"Cancelar":"Fechar"}</button>${can("edit")?`<button type="button" class="btn primary" id="mSave">Salvar</button>`:""}</div></footer></div></div>`;
   const form=$("#mf");const close=()=>{root.innerHTML="";document.removeEventListener("keydown",onKey)};
   const onKey=e=>{if(e.key==="Escape")close()};document.addEventListener("keydown",onKey);
@@ -672,6 +699,16 @@ function openForm(col,id,preset){
       const d=b.querySelector("[data-fotodel]");if(d)d.onclick=()=>redraw("")}
     bindFoto()});
   form.addEventListener("click",e=>{const a=e.target.closest("[data-subadd]");if(a){const f=m.fields.find(x=>x.k===a.dataset.subadd);const box=form.querySelector(`[data-list="${f.k}"] .sublist`);box.insertAdjacentHTML("beforeend",subRowHTML(f,{}));box.lastElementChild.querySelector("input").focus();return}const d=e.target.closest("[data-subdel]");if(d)d.closest(".subrow").remove()});
+  if(col==="reproducao"&&form.elements.compraId){form.elements.compraId.addEventListener("change",()=>{const c=S.compras[form.elements.compraId.value];if(!c)return;const rs=resumoCompra(c);
+      if(rs.valorCob)form.elements.valorCobertura.value=String(Math.round(rs.valorCob*100)/100).replace(".",",");
+      if(c.paletasPorCobertura)form.elements.paletas.value=String(c.paletasPorCobertura).replace(".",",");
+      if(c.custoPaleta)form.elements.custoPaleta.value=String(c.custoPaleta).replace(".",",");
+      if(c.garanhao&&!form.elements.garanhao.value)form.elements.garanhao.value=c.garanhao;
+      if(rs.qtd&&rs.usadas>=rs.qtd&&!id)toast(`Atenção: as ${rs.qtd} coberturas deste pacote já foram usadas`)});
+    const calc=()=>{const cur=Object.assign({},rec,readForm(form,m.fields));let box=form.querySelector(".calc");if(!box){form.insertAdjacentHTML("beforeend",'<div class="calc"></div>');box=form.querySelector(".calc")}const c=custoInsem(cur);
+      const ln=(a,b,cls="")=>`<div class="ln ${cls}"><span>${a}</span><span class="num">${b}</span></div>`;
+      box.innerHTML=`<span class="t">Custo deste potro</span>`+[["Cobertura",c.cobertura],[`Paletas (${numFmt(cur.paletas)} × ${money(cur.custoPaleta)})`,c.paletas],["Frete do sêmen",c.frete],["Fertilização",c.fertilizacao],["Medicamentos",c.medicamentos],["Receptora",c.receptora],[`Ultrassons (${(cur.ultrassons||[]).length})`,c.ultrassons],["Outros",c.outros]].filter(x=>x[1]).map(x=>ln(x[0],money(x[1]))).join("")+ln("Total",money(c.total),"tot")};
+    calc();form.addEventListener("input",calc);form.addEventListener("change",calc);form.addEventListener("click",e=>{if(e.target.closest("[data-subdel],[data-subadd]"))setTimeout(calc,0)})}
   if(col==="reproducao"){const pre=(campo,ped)=>{const nome=form.elements[campo].value;const g=pedDoAnimal(nome);if(!g)return;const vazio=PED_KEYS.every(([k])=>!form.elements[ped+"__"+k].value.trim());if(vazio)PED_KEYS.forEach(([k])=>{form.elements[ped+"__"+k].value=g[k]||""})};
     form.elements.doadora.addEventListener("change",()=>pre("doadora","genealogiaDoadora"));form.elements.garanhao.addEventListener("change",()=>pre("garanhao","genealogiaGaranhao"));pre("doadora","genealogiaDoadora");pre("garanhao","genealogiaGaranhao")}
   if(col==="competicoes"){const upd=()=>{const cur=Object.assign({},rec,readForm(form,m.fields));let box=form.querySelector(".calc");if(!box){form.insertAdjacentHTML("beforeend",'<div class="calc"></div>');box=form.querySelector(".calc")}box.innerHTML=calcHTML(cur)};upd();form.addEventListener("input",upd);form.addEventListener("change",upd);form.addEventListener("click",e=>{if(e.target.closest("[data-subdel],[data-subadd]"))setTimeout(upd,0)})}
@@ -702,15 +739,18 @@ function applyStock(prev,next){
 
 const PED_KEYS=[["p",1,1,4],["m",1,5,4],["pp",2,1,2],["pm",2,3,2],["mp",2,5,2],["mm",2,7,2],["ppp",3,1,1],["ppm",3,2,1],["pmp",3,3,1],["pmm",3,4,1],["mpp",3,5,1],["mpm",3,6,1],["mmp",3,7,1],["mmm",3,8,1]];
 function pedRot(k){if(k.length===1)return k==="p"?"Pai":"Mãe";const lado=k[0]==="p"?"paterno":"materno",sx=k[k.length-1]==="p";if(k.length===2)return (sx?"Avô ":"Avó ")+(sx?lado:lado.replace("o","a").replace(/o$/,"a"));return sx?"Bisavô":"Bisavó"}
-function pedHTML(g,editName){g=g||{};return `<div class="ped-wrap"><div class="ped">${PED_KEYS.map(([k,col,row,span])=>`<div class="cell g${col} ${k.endsWith("p")?"mac":"fem"}" style="grid-column:${col};grid-row:${row} / span ${span}"><span class="rot">${pedRot(k)}</span>${editName?`<input type="text" name="${editName}__${k}" id="${editName}__${k}" value="${esc(g[k]||"")}" placeholder="Nome / registro" aria-label="${pedRot(k)}">`:`<span class="nm${g[k]?"":" vazio"}">${esc(g[k]||"—")}</span>`}</div>`).join("")}</div></div>`}
+function pedHTML(g,editName){g=g||{};const com=editName?[]:ancestraisComuns(g);return `<div class="ped-wrap"><div class="ped">${PED_KEYS.map(([k,col,row,span])=>`<div class="cell g${col} ${k.endsWith("p")?"mac":"fem"}${com.includes(normNome(g[k]))?" comum":""}" style="grid-column:${col};grid-row:${row} / span ${span}"><span class="rot">${pedRot(k)}</span>${editName?`<input type="text" name="${editName}__${k}" id="${editName}__${k}" value="${esc(g[k]||"")}" placeholder="Nome / registro" aria-label="${pedRot(k)}">`:`<span class="nm${g[k]?"":" vazio"}">${esc(g[k]||"—")}</span>`}</div>`).join("")}</div></div>`}
 function pedVazio(g){return !g||PED_KEYS.every(([k])=>!g[k])}
 function pedDoAnimal(nome){const a=arr("animais").find(x=>!pedVazio(x.genealogia)&&String(x.nome).trim().toLowerCase()===String(nome||"").trim().toLowerCase());return a?a.genealogia:null}
 // genealogia do potro: pai = garanhão, mãe = doadora, e as gerações acima vêm das genealogias deles
 function pedPotro(r){const G=r.genealogiaGaranhao||pedDoAnimal(r.garanhao)||{},D=r.genealogiaDoadora||pedDoAnimal(r.doadora)||{};const o={p:r.garanhao,m:r.doadora};
   ["p","m","pp","pm","mp","mm"].forEach(k=>{o["p"+k]=G[k]||"";o["m"+k]=D[k]||""});return o}
+function normNome(s){return String(s||"").toLowerCase().replace(/\(.*?\)/g,"").replace(/\s+/g," ").trim()}
+function ancestraisComuns(g){const lado=pre=>PED_KEYS.filter(([k])=>k.startsWith(pre)&&g[k]).map(([k])=>normNome(g[k])).filter(Boolean);const P=new Set(lado("p")),out=[];new Set(lado("m")).forEach(n=>{if(P.has(n))out.push(n)});return out}
 function abrirGenealogia(r){const g=pedPotro(r);const root=$("#modalRoot");const nome=r.nomePotro||(r.dataNascPotro?"Potro":"Futuro potro");
   root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt" style="width:min(820px,100%)"><header><h2 id="mt">Genealogia</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
   <div style="padding:16px 18px"><div class="ped-sub">${r.fotoPotro?`<img src="${esc(r.fotoPotro)}" alt="">`:""}<div><h3>${esc(nome)}</h3><div class="note">${esc(r.filiacao||`${r.garanhao} × ${r.doadora}`)}${r.numeroRegistro?" · Reg. "+esc(r.numeroRegistro):""}${r.dataNascPotro?" · nascido em "+dBR(r.dataNascPotro):""}</div></div></div>${pedHTML(g)}
+  ${(()=>{const comuns=ancestraisComuns(g);return comuns.length?`<div class="cons"><strong>Atenção: ancestrais em comum nos dois lados</strong> (${comuns.map(esc).join(", ")}). Isso indica parentesco entre o pai e a mãe; avalie a consanguinidade.</div>`:""})()}
   <p class="note" style="margin:12px 0 0">Os avós e bisavós vêm da genealogia preenchida para a doadora e para o garanhão, neste registro ou no cadastro deles em Animais.</p></div>
   <footer><div class="right"><button type="button" class="btn" id="mCancel">Fechar</button></div></footer></div></div>`;
   const close=()=>{root.innerHTML=""};$("#mClose").onclick=close;$("#mCancel").onclick=close;$("#mb").addEventListener("mousedown",e=>{if(e.target.id==="mb")close()})}
@@ -738,11 +778,13 @@ const IC={
   estoque:'<path d="M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10"/>',
   tarefas:'<path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
   custos:'<path d="M3 3v18h18M7 15l4-4 3 3 5-6"/>',
+  inseminacao:'<path d="M9 3h6M10 3v5l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3M7.5 14h9"/>',
+  compras:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/>',
   reproducao:'<circle cx="9" cy="9" r="5"/><path d="M9 14v7M6 18h6M14 4l6 0 0 6M20 4l-6.5 6.5"/>',
   competicoes:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>',
   configuracoes:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'
 };
-const VIEWS=[["painel","Painel"],["financeiro","Entradas e saídas"],["alimentacao","Alimentação"],["animais","Animais"],["cocheiras","Cocheiras"],["estoque","Estoque"],["tarefas","Tarefas"],["reproducao","Reprodução"],["competicoes","Competições"],["custos","Custo por animal"],["configuracoes","Configurações"]];
+const VIEWS=[["painel","Painel"],["financeiro","Entradas e saídas"],["alimentacao","Alimentação"],["animais","Animais"],["cocheiras","Cocheiras"],["estoque","Estoque"],["tarefas","Tarefas"],["reproducao","Reprodução"],["inseminacao","Inseminação"],["competicoes","Competições"],["compras","Compras parceladas"],["custos","Custo por animal"],["configuracoes","Configurações"]];
 function renderNav(){
   $("#nav").innerHTML=VIEWS.filter(v=>viewOk(v[0])).map(([k,t])=>`<a href="#${k}" data-view="${k}"${UI.view===k?' aria-current="page"':""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>${t}</a>`).join("");
 }
@@ -779,6 +821,8 @@ V.painel=()=>{
   <div class="grid2">
     <section class="panel chart"><h2>Entradas × saídas <small>últimos 6 meses até ${MESES[+UI.mes.slice(5,7)-1]}/${UI.mes.slice(0,4)}</small></h2>${chart6()}</section>
     <section class="panel"><h2>Para onde vai o dinheiro <small>${esc(periodLabel())}</small></h2>${cats.length?`<div class="bars">${cats.slice(0,8).map(([c,v])=>`<div class="bar-row"><span class="name" title="${esc(c)}">${esc(c)}</span><span class="track"><span class="fill" style="display:block;width:${Math.max(2,v/maxC*100)}%"></span></span><span class="num">${money(v)}</span></div>`).join("")}</div>`:`<p class="empty">Nenhuma saída no período.</p>`}</section>
+    ${(()=>{const lim=addDias(today(),30);const ps=[];arr("compras").forEach(c=>parcelas(c).forEach(p=>{if(!p.paga&&p.data&&p.data<=lim)ps.push({c,p})}));ps.sort((a,b)=>a.p.data.localeCompare(b.p.data));
+      return ps.length?`<section class="panel"><h2>Parcelas a vencer <small>próximos 30 dias</small></h2><div class="list">${ps.slice(0,6).map(({c,p})=>`<div class="row" data-parcelas="${esc(c.id)}" style="cursor:pointer"><div><div>${esc(c.descricao)}</div><div class="sub">parcela ${p.n}/${parseNum(c.nParcelas)||1} · ${money(p.valor)}</div></div><span class="pill ${p.data<today()?"out":"warn"}">${dBR(p.data)}</span></div>`).join("")}</div></section>`:""})()}
     <section class="panel"><h2>Próximas tarefas</h2>${pend.length?`<div class="list">${pend.slice(0,6).map(t=>`<div class="row" data-open="tarefas:${esc(t.id)}" style="cursor:pointer"><div><div>${esc(t.titulo)}</div><div class="sub">${esc(t.tipo||"")}${t.animal?" · "+esc(animalNome(t.animal)):""}</div></div><span class="pill ${t.data&&t.data<today()?"out":"neutral"}">${dBR(t.data)}</span></div>`).join("")}</div>`:`<p class="empty">Nenhuma tarefa pendente.</p>`}</section>
     <section class="panel"><h2>Hora de pedir <small>ração, feno, silagem, óleo…</small></h2>${pedidos.length?`<div class="list">${pedidos.slice(0,7).map(({e,s})=>`<div class="row" data-open="estoque:${esc(e.id)}" style="cursor:pointer"><div><div>${esc(e.item)}</div><div class="sub">${s.p.semConsumo?`saldo ${numFmt(e.quantidade)} ${esc(e.unidade||"")} · abaixo do mínimo`:`saldo ${numFmt(e.quantidade)} ${esc(e.unidade||"")} · dura até ${dBR(s.p.acaba)}${s.p.sug?` · pedir ${numFmt(s.p.sug)} ${esc(e.unidade||"")}`:""}`}</div></div><span class="pill ${s.cls}">${s.txt}</span></div>`).join("")}</div><p style="margin:10px 0 0"><a href="#estoque">Ver estoque completo</a></p>`:`<p class="empty">Cadastre os itens do estoque com o consumo por dia para o sistema avisar quando pedir.</p>`}</section>
     <section class="panel" style="grid-column:1/-1"><h2>Custo por animal <small>${esc(periodLabel())} · os 5 maiores</small></h2>${cpa.linhas.length?`<div class="bars">${cpa.linhas.slice(0,5).map(l=>`<div class="bar-row"><span class="name">${esc(l.animal.nome)}</span><span class="track"><span class="fill" style="display:block;background:var(--brand);width:${Math.max(2,l.total/(cpa.linhas[0].total||1)*100)}%"></span></span><span class="num">${money(l.total)}</span></div>`).join("")}</div><p style="margin:12px 0 0"><a href="#custos">Ver detalhamento completo</a></p>`:`<p class="empty">Cadastre os animais para ver o custo de cada um.</p>`}</section>
@@ -929,6 +973,30 @@ V.competicoes=()=>{
 };
 function fotoDe(nome,propria){if(propria)return propria;const a=arr("animais").find(x=>x.foto&&String(x.nome).trim().toLowerCase()===String(nome||"").trim().toLowerCase());return a?a.foto:""}
 const thumbH=(src,alt)=>src?`<img class="thumb" src="${esc(src)}" alt="${esc(alt)}" title="${esc(alt)}" loading="lazy">`:`<span class="thumb thumb-empty" title="${esc(alt)}"></span>`;
+/* ---------- compras parceladas ---------- */
+function addMeses(iso,n){const [y,m,d]=iso.split("-").map(Number);const t=new Date(y,m-1+n,1);const ult=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(Math.min(d,ult)).padStart(2,"0")}`}
+function parcelas(c){const n=Math.max(1,Math.round(parseNum(c.nParcelas)||1));const base=parseNum(c.valorTotal)-parseNum(c.entrada);const v=Math.round(base/n*100)/100;const pagas=new Set(c.pagas||[]);
+  return Array.from({length:n},(_,i)=>({n:i+1,data:c.primeiraParcela?addMeses(c.primeiraParcela,i):"",valor:i===n-1?Math.round((base-v*(n-1))*100)/100:v,paga:pagas.has(i+1)}))}
+function resumoCompra(c){const ps=parcelas(c);const pago=parseNum(c.entrada)+ps.filter(p=>p.paga).reduce((s,p)=>s+p.valor,0);const prox=ps.find(p=>!p.paga);
+  const usadas=arr("reproducao").filter(r=>r.compraId===c.id).length;const q=parseNum(c.qtdCoberturas);
+  return{ps,pago,saldo:parseNum(c.valorTotal)-pago,prox,pagas:ps.filter(p=>p.paga).length,usadas,qtd:q,valorCob:q?parseNum(c.valorTotal)/q:0,atrasadas:ps.filter(p=>!p.paga&&p.data&&p.data<today()).length}}
+function abrirParcelas(id){const c=S.compras[id];const r=resumoCompra(c);const root=$("#modalRoot");const fin=can("fin");
+  root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><header><h2 id="mt">Parcelas · ${esc(c.descricao)}</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
+  <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+   <div class="kpis" style="margin:0"><div class="kpi"><span class="lbl">Pago</span><span class="val" style="font-size:18px">${money(r.pago)}</span><span class="hint">${r.pagas}/${r.ps.length} parcelas</span></div><div class="kpi neg"><span class="lbl">Falta pagar</span><span class="val" style="font-size:18px">${money(r.saldo)}</span></div></div>
+   <p class="note" style="margin:0">Ao marcar uma parcela como paga, ela também entra em Entradas e saídas (categoria Compras parceladas).</p>
+   <div class="parc">${r.ps.map(p=>`<span class="num">${p.n}ª</span><span class="num ${p.paga?"pg":p.data<today()?"at":""}">${dBR(p.data)}${p.paga?" · paga":p.data<today()?" · atrasada":""}</span><span class="num">${money(p.valor)}</span>${fin?(p.paga?`<button type="button" class="btn small ghost" data-parc-desf="${p.n}">Desfazer</button>`:`<button type="button" class="btn small" data-parc-pagar="${p.n}">Marcar paga</button>`):"<span></span>"}`).join("")}</div>
+  </div><footer><div class="right"><button type="button" class="btn" id="mCancel">Fechar</button></div></footer></div></div>`;
+  const close=()=>{root.innerHTML=""};$("#mClose").onclick=close;$("#mCancel").onclick=close;$("#mb").addEventListener("mousedown",e=>{if(e.target.id==="mb")close()});
+  root.querySelectorAll("[data-parc-pagar]").forEach(b=>b.onclick=()=>{const n=+b.dataset.parcPagar;const p=r.ps[n-1];const lid="parc-"+c.id+"-"+n;
+    put("lancamentos",{id:lid,tipo:"Saída",data:today(),categoria:L("saida").includes("Compras parceladas")?"Compras parceladas":"Outras saídas",valor:p.valor,descricao:`${c.descricao} · parcela ${n}/${r.ps.length}`,situacao:"Pago",obs:"Vencimento "+dBR(p.data),atualizado:new Date().toISOString()});
+    put("compras",Object.assign({},c,{pagas:[...new Set([...(c.pagas||[]),n])].sort((a,b)=>a-b)}));render();abrirParcelas(id);toast(`Parcela ${n} paga`)});
+  root.querySelectorAll("[data-parc-desf]").forEach(b=>b.onclick=()=>{const n=+b.dataset.parcDesf;del("lancamentos","parc-"+c.id+"-"+n);put("compras",Object.assign({},c,{pagas:(c.pagas||[]).filter(x=>x!==n)}));render();abrirParcelas(id)});
+}
+/* ---------- custo da inseminação ---------- */
+function custoInsem(r){const ult=(r.ultrassons||[]).reduce((s,u)=>s+parseNum(u.valor),0);
+  const partes={cobertura:parseNum(r.valorCobertura),paletas:parseNum(r.paletas)*parseNum(r.custoPaleta),frete:parseNum(r.freteSemen),fertilizacao:parseNum(r.custoFertilizacao),medicamentos:parseNum(r.custoMedicamentos),receptora:parseNum(r.custoReceptora),ultrassons:ult,outros:parseNum(r.custo)};
+  partes.total=Object.values(partes).reduce((a,b)=>a+b,0);return partes}
 function partoPrevisto(r){return r.dataInseminacao?addDias(r.dataInseminacao,340):""}
 function statusRepro(r){
   if(r.dataNascPotro)return{cls:"in",txt:"Potro nascido"};
@@ -937,6 +1005,48 @@ function statusRepro(r){
   if(r.diagnostico==="Prenhe"){const pp=partoPrevisto(r);const d=pp?diasEntre(today(),pp)-1:null;return{cls:d!==null&&d<=30?"warn":"brass",txt:d!==null&&d<=30?(d>=0?`Parto em ${d} dias`:"Parto previsto já passou"):"Prenhe"}}
   const dd=r.dataInseminacao?diasEntre(r.dataInseminacao,today())-1:0;
   return{cls:dd>=14?"warn":"neutral",txt:dd>=14?"Fazer diagnóstico":"Aguardando diagnóstico"}}
+V.inseminacao=()=>{
+  const rows=arr("reproducao").sort((a,b)=>String(b.dataInseminacao).localeCompare(a.dataInseminacao));
+  const tot=rows.reduce((s,r)=>s+custoInsem(r).total,0);const comPotro=rows.filter(r=>r.dataNascPotro);
+  const media=rows.length?tot/rows.length:0;
+  return `<div class="kpis"><div class="kpi"><span class="lbl">Inseminações</span><span class="val">${rows.length}</span></div>
+   <div class="kpi neg"><span class="lbl">Custo total</span><span class="val">${money(tot)}</span></div>
+   <div class="kpi"><span class="lbl">Custo médio por potro</span><span class="val">${money(media)}</span><span class="hint">${comPotro.length} potros nascidos</span></div></div>
+  <p class="note" style="margin:0 0 12px">Cada linha é uma inseminação. Escolha o pacote de cobertura para puxar o valor da cobertura e o custo das paletas. Depois some fertilização, medicamentos e cada ultrassom. O total é o custo do potro. Os mesmos registros aparecem em Reprodução, onde ficam a gestação, o potro e a genealogia.</p>
+  ${toolbar("reproducao",`<button type="button" class="btn" data-csv="reproducao">Exportar planilha</button>`)}
+  ${tableView("reproducao",[
+    {l:"Data",h:x=>`<span class="num">${dBR(x.dataInseminacao)}</span>`,v:x=>dBR(x.dataInseminacao)},
+    {l:"Doadora × Garanhão",h:x=>`<strong>${esc(x.doadora)}</strong> × ${esc(x.garanhao)}${x.compraId&&S.compras[x.compraId]?`<div style="font-size:12.5px;color:var(--muted)">${esc(S.compras[x.compraId].descricao)}</div>`:""}`,v:x=>x.doadora+" "+x.garanhao,wrap:1},
+    {l:"Cobertura",r:1,h:x=>`<span class="num">${money(custoInsem(x).cobertura)}</span>`},
+    {l:"Paletas",r:1,h:x=>`<span class="num">${money(custoInsem(x).paletas)}</span>${x.paletas?`<div style="font-size:12px;color:var(--muted)" class="num">${numFmt(x.paletas)} × ${money(x.custoPaleta)}</div>`:""}`},
+    {l:"Vet. / medic.",r:1,h:x=>{const c=custoInsem(x);return `<span class="num">${money(c.fertilizacao+c.medicamentos)}</span>`}},
+    {l:"Ultrassons",r:1,h:x=>`<span class="num">${money(custoInsem(x).ultrassons)}</span>${(x.ultrassons||[]).length?`<div style="font-size:12px;color:var(--muted)">${x.ultrassons.length} exame${x.ultrassons.length>1?"s":""}</div>`:""}`},
+    {l:"Outros",r:1,h:x=>{const c=custoInsem(x);return `<span class="num">${money(c.frete+c.receptora+c.outros)}</span>`}},
+    {l:"Custo do potro",r:1,h:x=>`<strong class="num">${money(custoInsem(x).total)}</strong>`},
+    {l:"Situação",h:x=>{const st=statusRepro(x);return `<span class="pill ${st.cls}">${st.txt}</span>`}}
+  ],rows,{vazio:"Nenhuma inseminação registrada.",foot:rs=>`<td colspan="7">Total (${rs.length})</td><td class="r num">${money(rs.reduce((s,r)=>s+custoInsem(r).total,0))}</td><td></td>`})}`;
+};
+V.compras=()=>{
+  const rows=arr("compras").sort((a,b)=>String(b.dataCompra||"").localeCompare(a.dataCompra||""));
+  const rs=rows.map(c=>[c,resumoCompra(c)]);
+  const total=rows.reduce((s,c)=>s+parseNum(c.valorTotal),0),pago=rs.reduce((s,[,r])=>s+r.pago,0);
+  const mes=today().slice(0,7);const doMes=rs.reduce((s,[,r])=>s+r.ps.filter(p=>!p.paga&&(p.data||"").slice(0,7)===mes).reduce((a,p)=>a+p.valor,0),0);
+  const atras=rs.reduce((s,[,r])=>s+r.atrasadas,0);
+  return `<div class="kpis"><div class="kpi"><span class="lbl">Total comprado</span><span class="val">${money(total)}</span></div>
+   <div class="kpi pos"><span class="lbl">Já pago</span><span class="val">${money(pago)}</span></div>
+   <div class="kpi neg"><span class="lbl">Falta pagar</span><span class="val">${money(total-pago)}</span></div>
+   <div class="kpi ${atras?"neg":""}"><span class="lbl">A pagar este mês</span><span class="val">${money(doMes)}</span>${atras?`<span class="hint">${atras} parcela${atras>1?"s":""} atrasada${atras>1?"s":""}</span>`:""}</div></div>
+  ${toolbar("compras",`<button type="button" class="btn" data-csv="compras">Exportar planilha</button>`)}
+  ${tableView("compras",[
+    {l:"Compra",h:x=>`<strong>${esc(x.descricao)}</strong><div style="font-size:12.5px;color:var(--muted)">${esc(x.tipo||"")}${x.vendedor?" · "+esc(x.vendedor):""}</div>`,v:x=>x.descricao+" "+(x.vendedor||"")+" "+(x.garanhao||""),wrap:1},
+    {l:"Valor total",r:1,h:x=>`<span class="num">${money(x.valorTotal)}</span>`},
+    {l:"Parcelas",h:x=>{const r=resumoCompra(x);return `<span class="pill ${r.atrasadas?"out":r.pagas===r.ps.length?"in":"neutral"}">${r.pagas}/${r.ps.length} pagas</span>`}},
+    {l:"Próxima",h:x=>{const r=resumoCompra(x);return r.prox?`<span class="num">${dBR(r.prox.data)}</span> <span style="color:var(--muted)" class="num">${money(r.prox.valor)}</span>`:"Quitado"}},
+    {l:"Falta pagar",r:1,h:x=>`<span class="num">${money(resumoCompra(x).saldo)}</span>`},
+    {l:"Coberturas",h:x=>{const r=resumoCompra(x);return x.tipo==="Pacote de coberturas"&&r.qtd?`<span class="pill ${r.usadas>=r.qtd?"neutral":"brass"}">${r.usadas}/${r.qtd} usadas</span><div style="font-size:12px;color:var(--muted)" class="num">${money(r.valorCob)} cada</div>`:""}},
+    {l:"",h:x=>`<button type="button" class="btn small" data-parcelas="${esc(x.id)}">Parcelas</button>`}
+  ],rows,{vazio:"Nenhuma compra cadastrada."})}`;
+};
 V.reproducao=()=>{
   const f=UI.filtro.rep||"andamento";
   let rows=arr("reproducao");
@@ -960,8 +1070,8 @@ V.reproducao=()=>{
     {l:"Parto previsto",h:x=>x.dataNascPotro?"":`<span class="num">${dBR(partoPrevisto(x))}</span>`},
     {l:"Potro",h:x=>x.dataNascPotro?`${x.fotoPotro?`<img class="thumb" src="${esc(x.fotoPotro)}" alt="" style="float:left;margin-right:8px">`:""}<strong>${esc(x.nomePotro||"Sem nome")}</strong><div style="font-size:12.5px;color:var(--muted)">${dBR(x.dataNascPotro)}${x.sexoPotro?" · "+esc(x.sexoPotro):""}</div>`:"",v:x=>x.nomePotro},
     {l:"Registro / chip",h:x=>[x.numeroRegistro?"Reg. "+esc(x.numeroRegistro):"",x.chip?"Chip "+esc(x.chip):"",x.registroDefinitivo?`<span class="pill in">Definitivo</span>`:x.registroProvisorio?`<span class="pill warn">Provisório</span>`:""].filter(Boolean).join(" · ")},
-    {l:"Custo",r:1,h:x=>x.custo?`<span class="num">${money(x.custo)}</span>`:""},
-    {l:"",h:x=>`<span style="display:inline-flex;gap:6px"><button type="button" class="btn small" data-ped-ver="${esc(x.id)}">Genealogia</button>${x.dataNascPotro&&!x.potroCadastrado&&can("edit")?`<button type="button" class="btn small" data-potro="${esc(x.id)}">Cadastrar potro</button>`:""}${x.custo&&!x.lancado&&can("fin")?`<button type="button" class="btn small" data-replancar="${esc(x.id)}">Lançar custo</button>`:""}</span>`}
+    ...(can("fin")?[{l:"Custo do potro",r:1,h:x=>{const c=custoInsem(x).total;return c?`<span class="num">${money(c)}</span>`:""}}]:[]),
+    {l:"",h:x=>`<span style="display:inline-flex;gap:6px"><button type="button" class="btn small" data-ped-ver="${esc(x.id)}">Genealogia</button>${x.dataNascPotro&&!x.potroCadastrado&&can("edit")?`<button type="button" class="btn small" data-potro="${esc(x.id)}">Cadastrar potro</button>`:""}${custoInsem(x).total&&!x.lancado&&can("fin")?`<button type="button" class="btn small" data-replancar="${esc(x.id)}">Lançar custo</button>`:""}</span>`}
   ],rows,{vazio:f==="potros"?"Nenhum potro registrado ainda.":"Nenhuma cobertura em andamento."})}`;
 };
 V.custos=()=>{
@@ -1025,8 +1135,8 @@ function render(){
   renderBrand();renderNav();renderPeriod();
   const t=VIEWS.find(v=>v[0]===UI.view)||VIEWS[0];
   $("#viewTitle").textContent=t[1];
-  $("#viewEyebrow").textContent=["animais","cocheiras","estoque","configuracoes","tarefas","reproducao"].includes(UI.view)?S.cfg.nome:periodLabel();
-  $("#periodBox").style.visibility=["animais","estoque","configuracoes","tarefas","reproducao"].includes(UI.view)?"hidden":"visible";
+  $("#viewEyebrow").textContent=["animais","cocheiras","estoque","configuracoes","tarefas","reproducao","inseminacao","compras"].includes(UI.view)?S.cfg.nome:periodLabel();
+  $("#periodBox").style.visibility=["animais","estoque","configuracoes","tarefas","reproducao","inseminacao","compras"].includes(UI.view)?"hidden":"visible";
   if(UI.view==="cocheiras")$("#periodBox").style.visibility="visible";
   const act=document.activeElement;const focusId=act&&act.id;const selS=act&&act.selectionStart;
   const v=$("#view");
@@ -1062,13 +1172,14 @@ view.addEventListener("click",async e=>{
   const add=t.closest("[data-add]");if(add){openForm(add.dataset.add);return}
   const feita=t.closest("[data-feita]");if(feita){const x=S.tarefas[feita.dataset.feita];put("tarefas",Object.assign({},x,{status:"Feita"}));render();toast("Tarefa concluída");return}
   const lan=t.closest("[data-lancar]");if(lan){const x=S.tarefas[lan.dataset.lancar];const cat=L("saida").find(c=>c.toLowerCase().includes((x.tipo||"").toLowerCase().slice(0,6)))||(x.tipo==="Vacina"||x.tipo==="Vermifugação"?"Medicamentos":"Outras saídas");put("tarefas",Object.assign({},x,{lancado:true}));openForm("lancamentos",null,{tipo:"Saída",data:x.data,valor:x.custo,descricao:x.titulo,animal:x.animal||"",categoria:L("saida").includes(cat)?cat:"",situacao:"Pendente"});return}
+  const pa=t.closest("[data-parcelas]");if(pa){abrirParcelas(pa.dataset.parcelas);return}
   const pv=t.closest("[data-ped-ver]");if(pv){abrirGenealogia(S.reproducao[pv.dataset.pedVer]);return}
   const fr=t.closest("[data-frep]");if(fr){UI.filtro.rep=fr.dataset.frep;render();return}
   const pt=t.closest("[data-potro]");if(pt){const r=S.reproducao[pt.dataset.potro];const aid=uid();
     put("animais",{id:aid,nome:r.nomePotro||("Potro de "+r.doadora),categoria:"Próprio",sexo:r.sexoPotro||"",nascimento:r.dataNascPotro,pelagem:r.pelagemPotro||"",registro:[r.numeroRegistro,r.chip?"chip "+r.chip:""].filter(Boolean).join(" · "),status:"Ativo",foto:r.fotoPotro||"",genealogia:pedPotro(r),obs:"Filiação: "+(r.filiacao||`${r.garanhao} × ${r.doadora}`),atualizado:new Date().toISOString()});
     put("reproducao",Object.assign({},r,{potroCadastrado:aid}));render();toast("Potro cadastrado em Animais");return}
   const rl=t.closest("[data-replancar]");if(rl){const r=S.reproducao[rl.dataset.replancar];put("reproducao",Object.assign({},r,{lancado:true}));
-    openForm("lancamentos",null,{tipo:"Saída",data:r.dataInseminacao,valor:r.custo,descricao:`Cobertura ${r.doadora} × ${r.garanhao}`,categoria:L("saida").includes("Reprodução")?"Reprodução":"",situacao:"Pago"});return}
+    const ci=custoInsem(r);openForm("lancamentos",null,{tipo:"Saída",data:r.dataInseminacao,valor:Math.round((ci.total-(r.compraId?ci.cobertura:0))*100)/100,descricao:`Inseminação ${r.doadora} × ${r.garanhao}${r.compraId?" (sem o valor da cobertura, que já está nas parcelas)":""}`,categoria:L("saida").includes("Reprodução")?"Reprodução":"",situacao:"Pago"});return}
   const cp=t.closest("[data-compra]");if(cp){openCompra(cp.dataset.compra);return}
   const cl=t.closest("[data-complancar]");if(cl){const c=S.competicoes[cl.dataset.complancar];const desc=`Competição ${c.evento||""} · ${animalNome(c.animal)}`.trim();
     put("lancamentos",{id:uid(),tipo:"Saída",data:c.dataCompeticao,categoria:"Competições",valor:Math.round(compDireto(c)*100)/100,descricao:desc,animal:c.animal,situacao:"Pago",atualizado:new Date().toISOString()});
@@ -1133,7 +1244,7 @@ function exportCSV(col){
   const head=m.fields.filter(f=>f.t!=="foto").map(f=>f.l);if(col==="alimentacao")head.push("Total (R$)");if(col==="competicoes")head.push("Custos informados (R$)","Gasto extra do preparo (R$)","Custo total (R$)");
   const lines=[head.map(csvCell).join(";")];
   rows.sort((a,b)=>String(a.data||a.dataCompeticao||a.dataInseminacao||a.nome||a.item||"").localeCompare(String(b.data||b.dataCompeticao||b.dataInseminacao||b.nome||b.item||""))).forEach(r=>{
-    const cells=m.fields.filter(f=>f.t!=="foto").map(f=>{const v=r[f.k];if(f.t==="pedigree")return PED_KEYS.filter(([k])=>v&&v[k]).map(([k])=>pedRot(k)+": "+v[k]).join(" | ");if(f.t==="list")return (v||[]).map(x=>[x.nome,x.periodo,x.valor!==""&&x.valor!=null?money(x.valor):"",x.veterinario].filter(Boolean).join(" / ")).join(" | ");if(f.t==="money"||f.t==="number")return csvNum(v);if(f.t==="date")return dBR(v);if(f.k==="animal")return animalNome(v);if(f.k==="cocheira")return cocheiraNome(v);if(f.k==="estoqueId")return estoqueNome(v);return v??""});
+    const cells=m.fields.filter(f=>f.t!=="foto").map(f=>{const v=r[f.k];if(f.t==="pedigree")return PED_KEYS.filter(([k])=>v&&v[k]).map(([k])=>pedRot(k)+": "+v[k]).join(" | ");if(f.t==="list")return (v||[]).map(x=>f.sub.map(sf=>sf.money?(x[sf.k]!==""&&x[sf.k]!=null?money(x[sf.k]):""):x[sf.k]).filter(Boolean).join(" / ")).join(" | ");if(f.t==="money"||f.t==="number")return csvNum(v);if(f.t==="date")return dBR(v);if(f.k==="animal")return animalNome(v);if(f.k==="cocheira")return cocheiraNome(v);if(f.k==="estoqueId")return estoqueNome(v);return v??""});
     if(col==="alimentacao")cells.push(csvNum(alimTotal(r)));if(col==="competicoes"){const p=prepCalc(r);cells.push(csvNum(compDireto(r)),csvNum(p?p.extra:0),csvNum(compTotal(r)))}lines.push(cells.map(csvCell).join(";"))});
   offerFile(`glamar-${col}-${UI.modo==="tudo"?"completo":UI.modo==="ano"?UI.mes.slice(0,4):UI.mes}.csv`,"﻿"+lines.join("\r\n"));
 }
@@ -1191,6 +1302,9 @@ function loadSample(){
   const rep=[{id:"ex-r1",genealogiaGaranhao:{p:"Pai do garanhão (exemplo)",m:"Mãe do garanhão (exemplo)"},doadora:"Estrela"+ex,garanhao:"Garanhão Exemplo",tipoCobertura:"Transferência de embrião",dataInseminacao:d(-200),receptora:"Receptora 12"+ex,paletas:2,veterinario:"Dr. exemplo",custo:3200,dataDiagnostico:d(-185),diagnostico:"Prenhe"},
     {id:"ex-r2",doadora:"Jade"+ex,garanhao:"Garanhão Exemplo",tipoCobertura:"Inseminação artificial",dataInseminacao:d(-16),paletas:1,custo:1800,diagnostico:"Aguardando"},
     {id:"ex-r3",doadora:"Estrela"+ex,garanhao:"Outro Garanhão",tipoCobertura:"Inseminação artificial",dataInseminacao:"2025-03-10",diagnostico:"Prenhe",dataNascPotro:"2026-02-12",nomePotro:"Brisa"+ex,sexoPotro:"Fêmea",pelagemPotro:"Tordilha",filiacao:"Outro Garanhão × Estrela",registroProvisorio:"Provisório 0001",chip:"9820000000001"}];
+  put("compras",{id:"ex-p1",descricao:"Pacote 3 coberturas (exemplo)",tipo:"Pacote de coberturas",vendedor:"Haras exemplo",garanhao:"Garanhão Exemplo",qtdCoberturas:3,paletasPorCobertura:5,custoPaleta:60,valorTotal:12000,nParcelas:30,primeiraParcela:"2026-05-20",dataCompra:"2026-05-01",pagas:[1,2,3,4,5,6]});
+  rep[0].compraId="ex-p1";rep[0].valorCobertura=4000;rep[0].custoPaleta=60;rep[0].paletas=5;rep[0].custoFertilizacao=450;rep[0].ultrassons=[{data:"",motivo:"Diagnóstico 14 dias",valor:180,vet:"Dr. exemplo"},{data:"",motivo:"Confirmação 30 dias",valor:180,vet:"Dr. exemplo"}];rep[0].custo=0;
+  rep[1].compraId="ex-p1";rep[1].valorCobertura=4000;rep[1].custoPaleta=60;rep[1].paletas=5;rep[1].custoFertilizacao=450;rep[1].custoMedicamentos=220;rep[1].custo=0;
   rep.forEach(x=>put("reproducao",x));
   coch.forEach(x=>put("cocheiras",x));an.forEach(x=>put("animais",x));est.forEach(x=>put("estoque",x));
   lan.forEach(x=>put("lancamentos",Object.assign({id:uid()},x)));al.forEach(x=>put("alimentacao",Object.assign({id:uid()},x)));tar.forEach(x=>put("tarefas",Object.assign({id:uid()},x)));

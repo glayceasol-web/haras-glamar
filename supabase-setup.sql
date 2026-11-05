@@ -53,14 +53,14 @@ create table if not exists public.registros (
 create or replace function public.pode_ler(c text) returns boolean
 language sql stable as $$
   select auth.uid() is not null and (
-    c not in ('lancamentos','competicoes') or public.meu_perfil() in ('admin','financeiro'))
+    c not in ('lancamentos','competicoes','compras') or public.meu_perfil() in ('admin','financeiro'))
 $$;
 create or replace function public.pode_gravar(c text) returns boolean
 language sql stable as $$
   select case
     when public.meu_perfil() is null or public.meu_perfil() = 'leitura' then false
     when c = 'config' then public.meu_perfil() = 'admin'
-    when c in ('lancamentos','competicoes') then public.meu_perfil() in ('admin','financeiro')
+    when c in ('lancamentos','competicoes','compras') then public.meu_perfil() in ('admin','financeiro')
     else true end
 $$;
 
