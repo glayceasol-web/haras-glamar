@@ -1,5 +1,5 @@
 // App do CTE GLAMAR: guarda a "casca" do app para abrir rápido. Os dados sempre vêm do Supabase.
-const CACHE="glamar-v1";
+const CACHE="glamar-v2";
 const SHELL=["/","/index.html","/config.js","/logo.jpg","/icon-192.png","/icon-512.png","/manifest.webmanifest","https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).catch(()=>{}));self.skipWaiting()});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

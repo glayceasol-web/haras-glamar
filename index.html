@@ -268,6 +268,7 @@ td:has(.thumb){padding-block:5px;width:56px}
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot" id="sideFoot"></div>
+    <div style="font-size:11px;color:var(--side-muted);padding:6px 18px 12px;opacity:.8" id="versao">Versão 07/11 · 21h40</div>
   </aside>
   <main class="main">
     <div class="topbar">
@@ -1646,7 +1647,7 @@ initStore();
 
 <button type="button" id="pwaInstall" hidden style="position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9999;background:#e8742a;color:#111;border:0;border-radius:999px;padding:11px 18px;font:600 15px system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.35)">⬇ Instalar app</button>
 <script>
-if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+if("serviceWorker" in navigator)window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});let rl=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!rl){rl=true;location.reload()}})});
 (function(){let ev=null;const b=document.getElementById("pwaInstall");
   const inst=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();ev=e;if(!inst)b.hidden=false});
