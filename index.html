@@ -502,14 +502,18 @@ function custoPorAnimal(){
   const out=Object.values(linhas).map(r=>{r.comp=r.comp||0;const t=r.alim+r.direto+r.rateio+r.comp;return Object.assign(r,{total:t,resultado:r.receita-t})});
   out.sort((a,b)=>b.total-a.total);return{linhas:out,geral,alimGeral,naoRateado:!S.cfg.rateio?geral:0};
 }
-function saldoEstoque(e){return parseNum(e.quantidade)}
+function autoConsumo(e){return parseNum(e.consumoDiaFixo)>0||parseNum(e.consumoAnimalDia)>0||dosesDe(e).length>0}
+function dataContagem(e){return e.dataContagem||String(e.atualizado||"").slice(0,10)||today()}
+function consumoEm(e,d){if(parseNum(e.consumoDiaFixo)>0)return parseNum(e.consumoDiaFixo);if(e.inicioConsumo&&d<e.inicioConsumo)return 0;const n=(Array.isArray(e.consomem)&&e.consomem.length)?e.consomem.filter(id=>S.animais[id]&&(S.animais[id].status||"Ativo")==="Ativo").length:(parseNum(e.nAnimais)||animaisAtivos().length);return doseEm(e,d).q*n}
+function usadoDesde(e){if(!autoConsumo(e))return 0;let t=0,k=0;for(let d=dataContagem(e);d<today()&&k<1000;d=addDias(d,1),k++)t+=consumoEm(e,d);return t}
+function saldoEstoque(e){const q=parseNum(e.quantidade);if(!autoConsumo(e))return q;return Math.max(0,Math.round((q-usadoDesde(e))*100)/100)}
 function consumoDia(e){
   if(parseNum(e.consumoDiaFixo)>0)return{v:parseNum(e.consumoDiaFixo),fonte:"informado"};
   if(parseNum(e.consumoAnimalDia)>0||dosesDe(e).length){const qd=doseHoje(e);const n=(Array.isArray(e.consomem)&&e.consomem.length)?e.consomem.filter(id=>S.animais[id]&&(S.animais[id].status||"Ativo")==="Ativo").length:(parseNum(e.nAnimais)||animaisAtivos().length);return{v:qd*n,fonte:`${numFmt(qd)} × ${n} animais`}}
   const ini=addDias(today(),-30);let q=0;arr("alimentacao").forEach(a=>{if(a.estoqueId===e.id&&a.data>=ini&&a.data<=today())q+=parseNum(a.quantidade)});
   return q>0?{v:q/30,fonte:"média das baixas (30 dias)"}:{v:0,fonte:""}}
 function previsao(e){
-  const c=consumoDia(e);const qtd=parseNum(e.quantidade);const prazo=parseNum(e.prazoEntrega),marg=parseNum(e.margem),cob=parseNum(e.cobertura)||30;
+  const c=consumoDia(e);const qtd=saldoEstoque(e);const prazo=parseNum(e.prazoEntrega),marg=parseNum(e.margem),cob=parseNum(e.cobertura)||30;
   const abaixoMin=e.minimo!==""&&e.minimo!==undefined&&qtd<parseNum(e.minimo);
   if(!c.v)return{c,semConsumo:true,abaixoMin,diasAtePedir:abaixoMin?0:Infinity};
   const dias=qtd/c.v;const ate=dias-prazo-marg;
@@ -611,7 +615,8 @@ const MOD={
   estoque:{titulo:"Estoque",singular:"item de estoque",fields:[
     {k:"item",l:"Item",t:"text",req:1,ph:"Ração 12% saco 40 kg"},
     {k:"categoria",l:"Categoria",t:"select",opts:opt(()=>L("estoqueCat"))},
-    {k:"quantidade",l:"Quantidade em estoque",t:"number",req:1,help:"Ajuste aqui quando chegar compra."},
+    {k:"quantidade",l:"Quantidade contada",t:"number",req:1,help:"Quanto tinha no dia da contagem. Depois o saldo desce sozinho conforme o consumo por dia."},
+    {k:"dataContagem",l:"Data da contagem",t:"date",help:"Se mudar a quantidade e deixar a data como está, o sistema usa a data de hoje."},
     {k:"unidade",l:"Unidade",t:"select",opts:opt(()=>L("unidade")),def:"kg"},
     {k:"minimo",l:"Estoque mínimo",t:"number",help:"Abaixo disso aparece o alerta."},
     {k:"consumoAnimalDia",l:"Consumo por animal por dia",t:"number",help:"Na unidade do item. Ex.: 4 (kg por dia)."},
@@ -819,6 +824,7 @@ function openForm(col,id,preset){
     if(miss.length){toast("Preencha: "+miss.map(f=>f.l).join(", "));const el=form.elements[miss[0].k];if(el)el.focus();return}
     const obj=Object.assign({},id?S[col][id]:{},data,{id:id||uid(),atualizado:new Date().toISOString()});
     if(col==="alimentacao")applyStock(id?S[col][id]:null,obj);
+    if(col==="estoque"){const old=id?S[col][id]:null;if(!old||parseNum(old.quantidade)!==parseNum(obj.quantidade)){if(!old||!obj.dataContagem||obj.dataContagem===old.dataContagem)obj.dataContagem=today()}}
     if(col==="reproducao"&&!obj.filiacao)obj.filiacao=`${obj.garanhao} × ${obj.doadora}`;
     if(col==="alimentacao"&&(obj.custoUnit===""||obj.custoUnit===undefined)){const e=S.estoque[obj.estoqueId];obj.custoUnit=e?parseNum(e.custoUnit):0}
     put(col,obj);close();render();toast("Salvo");
@@ -831,7 +837,7 @@ function applyStock(prev,next){
   const adj={};
   if(prev&&prev.baixa&&prev.baixa.id){adj[prev.baixa.id]=(adj[prev.baixa.id]||0)+parseNum(prev.baixa.qtd)}
   if(next){if(next.estoqueId&&S.estoque[next.estoqueId]){const q=parseNum(next.quantidade);next.baixa={id:next.estoqueId,qtd:q};adj[next.estoqueId]=(adj[next.estoqueId]||0)-q}else next.baixa=null}
-  Object.entries(adj).forEach(([eid,d])=>{const e=S.estoque[eid];if(!e||!d)return;put("estoque",Object.assign({},e,{quantidade:Math.round((parseNum(e.quantidade)+d)*1000)/1000}))});
+  Object.entries(adj).forEach(([eid,d])=>{const e=S.estoque[eid];if(!e||!d)return;put("estoque",Object.assign({},e,autoConsumo(e)?{quantidade:Math.round((saldoEstoque(e)+d)*1000)/1000,dataContagem:today()}:{quantidade:Math.round((parseNum(e.quantidade)+d)*1000)/1000}))});
 }
 
 const PED_KEYS=[["p",1,1,4],["m",1,5,4],["pp",2,1,2],["pm",2,3,2],["mp",2,5,2],["mm",2,7,2],["ppp",3,1,1],["ppm",3,2,1],["pmp",3,3,1],["pmm",3,4,1],["mpp",3,5,1],["mpm",3,6,1],["mmp",3,7,1],["mmm",3,8,1]];
@@ -948,7 +954,7 @@ function painelBase(){
     ${(()=>{const lim=addDias(today(),30);const ps=[];arr("compras").forEach(c=>parcelas(c).forEach(p=>{if(!p.paga&&p.data&&p.data<=lim)ps.push({c,p})}));ps.sort((a,b)=>a.p.data.localeCompare(b.p.data));
       return ps.length?`<section class="panel"><h2>Parcelas a vencer <small>próximos 30 dias</small></h2><div class="list">${ps.slice(0,6).map(({c,p})=>`<div class="row" data-parcelas="${esc(c.id)}" style="cursor:pointer"><div><div>${esc(c.descricao)}</div><div class="sub">parcela ${p.n}/${parseNum(c.nParcelas)||1} · ${money(p.valor)}</div></div><span class="pill ${p.data<today()?"out":"warn"}">${dBR(p.data)}</span></div>`).join("")}</div></section>`:""})()}`:""}
     <section class="panel"><h2>Próximas tarefas</h2>${pend.length?`<div class="list">${pend.slice(0,6).map(t=>`<div class="row" data-open="tarefas:${esc(t.id)}" style="cursor:pointer"><div><div>${esc(t.titulo)}</div><div class="sub">${esc(t.tipo||"")}${t.animal?" · "+esc(animalNome(t.animal)):""}</div></div><span class="pill ${t.data&&t.data<today()?"out":"neutral"}">${dBR(t.data)}</span></div>`).join("")}</div>`:`<p class="empty">Nenhuma tarefa pendente.</p>`}</section>
-    <section class="panel"><h2>Hora de pedir <small>ração, feno, silagem, óleo…</small></h2>${pedidos.length?`<div class="list">${pedidos.slice(0,7).map(({e,s})=>`<div class="row" data-open="estoque:${esc(e.id)}" style="cursor:pointer"><div><div>${esc(e.item)}</div><div class="sub">${s.p.semConsumo?`saldo ${numFmt(e.quantidade)} ${esc(e.unidade||"")} · abaixo do mínimo`:`saldo ${numFmt(e.quantidade)} ${esc(e.unidade||"")} · dura até ${dBR(s.p.acaba)}${s.p.sug?` · pedir ${numFmt(s.p.sug)} ${esc(e.unidade||"")}`:""}`}</div></div><span class="pill ${s.cls}">${s.txt}</span></div>`).join("")}</div><p style="margin:10px 0 0"><a href="#estoque">Ver estoque completo</a></p>`:`<p class="empty">Cadastre os itens do estoque com o consumo por dia para o sistema avisar quando pedir.</p>`}</section>
+    <section class="panel"><h2>Hora de pedir <small>ração, feno, silagem, óleo…</small></h2>${pedidos.length?`<div class="list">${pedidos.slice(0,7).map(({e,s})=>`<div class="row" data-open="estoque:${esc(e.id)}" style="cursor:pointer"><div><div>${esc(e.item)}</div><div class="sub">${s.p.semConsumo?`saldo ${numFmt(saldoEstoque(e))} ${esc(e.unidade||"")} · abaixo do mínimo`:`saldo hoje ${numFmt(saldoEstoque(e))} ${esc(e.unidade||"")} · dura até ${dBR(s.p.acaba)}${s.p.sug?` · pedir ${numFmt(s.p.sug)} ${esc(e.unidade||"")}`:""}`}</div></div><span class="pill ${s.cls}">${s.txt}</span></div>`).join("")}</div><p style="margin:10px 0 0"><a href="#estoque">Ver estoque completo</a></p>`:`<p class="empty">Cadastre os itens do estoque com o consumo por dia para o sistema avisar quando pedir.</p>`}</section>
     ${fin?`<section class="panel" style="grid-column:1/-1"><h2>Custo por animal <small>${esc(periodLabel())} · os 5 maiores</small></h2>${cpa.linhas.length?`<div class="bars">${cpa.linhas.slice(0,5).map(l=>`<div class="bar-row"><span class="name">${esc(l.animal.nome)}</span><span class="track"><span class="fill" style="display:block;background:var(--brand);width:${Math.max(2,l.total/(cpa.linhas[0].total||1)*100)}%"></span></span><span class="num">${money(l.total)}</span></div>`).join("")}</div><p style="margin:12px 0 0"><a href="#custos">Ver detalhamento completo</a></p>`:`<p class="empty">Cadastre os animais para ver o custo de cada um.</p>`}</section>`:""}
   </div>`;
 };
@@ -957,7 +963,7 @@ function painelOperacional(){
   const pedidos=arr("estoque").map(e=>({e,s:statusPedido(e)})).filter(x=>!x.s.p.semConsumo||x.s.p.abaixoMin).sort((a,b)=>a.s.p.diasAtePedir-b.s.p.diasAtePedir);
   return `<div class="kpis"><div class="kpi"><span class="lbl">Animais ativos</span><span class="val">${animaisAtivos().length}</span></div><div class="kpi ${pedidos.filter(x=>x.s.cls==="out").length?"neg":""}"><span class="lbl">Itens para pedir agora</span><span class="val">${pedidos.filter(x=>x.s.cls==="out").length}</span></div><div class="kpi"><span class="lbl">Tarefas pendentes</span><span class="val">${pend.length}</span></div></div>
   <div class="grid2"><section class="panel"><h2>Próximas tarefas</h2>${pend.length?`<div class="list">${pend.slice(0,8).map(t=>`<div class="row" data-open="tarefas:${esc(t.id)}" style="cursor:pointer"><div><div>${esc(t.titulo)}</div><div class="sub">${esc(t.tipo||"")}${t.animal?" · "+esc(animalNome(t.animal)):""}</div></div><span class="pill ${t.data&&t.data<today()?"out":"neutral"}">${dBR(t.data)}</span></div>`).join("")}</div>`:`<p class="empty">Nenhuma tarefa pendente.</p>`}</section>
-  <section class="panel"><h2>Hora de pedir</h2>${pedidos.length?`<div class="list">${pedidos.slice(0,8).map(({e,s})=>`<div class="row" data-open="estoque:${esc(e.id)}" style="cursor:pointer"><div><div>${esc(e.item)}</div><div class="sub">saldo ${numFmt(e.quantidade)} ${esc(e.unidade||"")}${s.p.acaba?" · dura até "+dBR(s.p.acaba):""}</div></div><span class="pill ${s.cls}">${s.txt}</span></div>`).join("")}</div>`:`<p class="empty">Nenhum item com consumo cadastrado.</p>`}</section></div>`;
+  <section class="panel"><h2>Hora de pedir</h2>${pedidos.length?`<div class="list">${pedidos.slice(0,8).map(({e,s})=>`<div class="row" data-open="estoque:${esc(e.id)}" style="cursor:pointer"><div><div>${esc(e.item)}</div><div class="sub">saldo hoje ${numFmt(saldoEstoque(e))} ${esc(e.unidade||"")}${s.p.acaba?" · dura até "+dBR(s.p.acaba):""}</div></div><span class="pill ${s.cls}">${s.txt}</span></div>`).join("")}</div>`:`<p class="empty">Nenhum item com consumo cadastrado.</p>`}</section></div>`;
 }
 function chart6(){
   const [y,m]=UI.mes.split("-").map(Number);const ms=[];for(let i=5;i>=0;i--){let mm=m-i,yy=y;while(mm<1){mm+=12;yy--}ms.push(`${yy}-${String(mm).padStart(2,"0")}`)}
@@ -1053,21 +1059,21 @@ V.cocheiras=()=>{
 };
 V.estoque=()=>{
   const rows=arr("estoque").map(e=>Object.assign({},e,{_s:statusPedido(e)})).sort((a,b)=>a._s.p.diasAtePedir-b._s.p.diasAtePedir||String(a.item).localeCompare(b.item));
-  const val=rows.reduce((s,e)=>s+parseNum(e.quantidade)*parseNum(e.custoUnit),0);
+  const val=rows.reduce((s,e)=>s+saldoEstoque(e)*parseNum(e.custoUnit),0);
   const agora=rows.filter(e=>e._s.cls==="out").length,semana=rows.filter(e=>e._s.cls==="warn").length;
   return `<div class="kpis"><div class="kpi ${agora?"neg":""}"><span class="lbl">Pedir agora</span><span class="val">${agora}</span><span class="hint">itens no limite</span></div>
    <div class="kpi"><span class="lbl">Pedir nos próximos 7 dias</span><span class="val">${semana}</span></div>
    ${can("fin")?`<div class="kpi"><span class="lbl">Valor em estoque</span><span class="val">${money(val)}</span></div>`:""}</div>
-  <p class="note" style="margin:0 0 12px">Para cada item, informe o consumo por dia, o prazo de entrega do fornecedor e uma margem de segurança. O sistema calcula até quando o estoque dura e o dia certo de fazer o pedido, já descontando o prazo de entrega. Quando a compra chegar, use “Chegou compra” para somar ao saldo.</p>
+  <p class="note" style="margin:0 0 12px">Para cada item, informe o consumo por dia, o prazo de entrega do fornecedor e uma margem de segurança. O saldo desce sozinho todo dia conforme o consumo; quando contar o estoque de verdade, use “Contagem” para acertar. O sistema calcula até quando o estoque dura e o dia certo de fazer o pedido, já descontando o prazo de entrega. Quando a compra chegar, use “Chegou compra” para somar ao saldo.</p>
   ${toolbar("estoque",`<button type="button" class="btn" data-csv="estoque">Exportar planilha</button>`)}
   ${tableView("estoque",[
     {l:"Item",h:x=>`<strong>${esc(x.item)}</strong><div style="font-size:12.5px;color:var(--muted)">${esc(x.categoria||"")}${x.fornecedor?" · "+esc(x.fornecedor):""}</div>`,v:x=>x.item},
-    {l:"Saldo",r:1,h:x=>`<span class="num">${numFmt(x.quantidade)} ${esc(x.unidade||"")}</span>`},
+    {l:"Saldo hoje",r:1,h:x=>autoConsumo(x)?`<span class="num"><strong>${numFmt(saldoEstoque(x))}</strong> ${esc(x.unidade||"")}</span><div style="font-size:12.5px;color:var(--muted)">contado ${numFmt(x.quantidade)} em ${dBR(dataContagem(x))}${usadoDesde(x)?` · usou ${numFmt(Math.round(usadoDesde(x)*100)/100)}`:""}</div>`:`<span class="num">${numFmt(x.quantidade)} ${esc(x.unidade||"")}</span>`,v:x=>saldoEstoque(x)},
     {l:"Consumo / dia",r:1,h:x=>x._s.p.c.v?`<span class="num" title="${esc(x._s.p.c.fonte)}">${numFmt(x._s.p.c.v)} ${esc(x.unidade||"")}</span>`:`<span style="color:var(--muted)">—</span>`},
     {l:"Dura até",h:x=>x._s.p.acaba?`<span class="num">${dBR(x._s.p.acaba)}</span> <span style="color:var(--muted);font-size:12.5px">(${Math.floor(x._s.p.dias)} d)</span>`:""},
     {l:"Pedido",h:x=>`<span class="pill ${x._s.cls}">${x._s.txt}</span>`},
     {l:"Sugestão de compra",r:1,h:x=>x._s.p.sug?`<span class="num">${numFmt(x._s.p.sug)} ${esc(x.unidade||"")}</span>${parseNum(x.custoUnit)&&can("fin")?`<div style="font-size:12.5px;color:var(--muted)" class="num">≈ ${money(x._s.p.sug*parseNum(x.custoUnit))}</div>`:""}`:""},
-    {l:"",h:x=>can("edit")?`<button type="button" class="btn small" data-compra="${esc(x.id)}">Chegou compra</button>`:""}
+    {l:"",h:x=>can("edit")?`<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="btn small" data-contagem="${esc(x.id)}">Contagem</button><button type="button" class="btn small" data-compra="${esc(x.id)}">Chegou compra</button></div>`:""}
   ],rows,{vazio:"Nenhum item no estoque."})}`;
 };
 // Ferrageamento: de quanto em quanto tempo cada animal precisa ferrar / casquear
@@ -1450,6 +1456,7 @@ view.addEventListener("click",async e=>{
   const add=t.closest("[data-add]");if(add){openForm(add.dataset.add);return}
   const feita=t.closest("[data-feita]");if(feita){const x=S.tarefas[feita.dataset.feita];put("tarefas",Object.assign({},x,{status:"Feita"}));render();toast("Tarefa concluída");return}
   const lan=t.closest("[data-lancar]");if(lan){const x=S.tarefas[lan.dataset.lancar];const cat=L("saida").find(c=>c.toLowerCase().includes((x.tipo||"").toLowerCase().slice(0,6)))||(x.tipo==="Vacina"||x.tipo==="Vermifugação"?"Medicamentos":"Outras saídas");put("tarefas",Object.assign({},x,{lancado:true}));openForm("lancamentos",null,{tipo:"Saída",data:x.data,valor:x.custo,descricao:x.titulo,animal:x.animal||"",categoria:L("saida").includes(cat)?cat:"",situacao:"Pendente"});return}
+  const ct=t.closest("[data-contagem]");if(ct){abrirContagem(ct.dataset.contagem);return}
   const pa=t.closest("[data-parcelas]");if(pa){abrirParcelas(pa.dataset.parcelas);return}
   const pv=t.closest("[data-ped-ver]");if(pv){abrirGenealogia(S.reproducao[pv.dataset.pedVer]);return}
   const fr=t.closest("[data-frep]");if(fr){UI.filtro.rep=fr.dataset.frep;render();return}
@@ -1502,6 +1509,20 @@ view.addEventListener("click",async e=>{
 });
 
 /* ---------- chegada de compra ---------- */
+function abrirContagem(id){
+  const e=S.estoque[id];const root=$("#modalRoot");
+  root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><header><h2 id="mt">Contagem · ${esc(e.item)}</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
+  <form id="mf" novalidate>
+    <p class="note full" style="margin:0">Pelo consumo, hoje deveria ter <strong>${numFmt(saldoEstoque(e))} ${esc(e.unidade||"")}</strong>. Conte o que tem de verdade e informe abaixo.</p>
+    <div class="field"><label for="kQtd">Quantidade contada (${esc(e.unidade||"")}) *</label><input id="kQtd" type="text" inputmode="decimal"></div>
+    <div class="field"><label for="kData">Data da contagem</label><input id="kData" type="date" value="${today()}"></div>
+  </form><footer><div class="right"><button type="button" class="btn" id="mCancel">Cancelar</button><button type="button" class="btn primary" id="mSave">Salvar contagem</button></div></footer></div></div>`;
+  const close=()=>{root.innerHTML=""};$("#mClose").onclick=close;$("#mCancel").onclick=close;$("#mb").addEventListener("mousedown",ev=>{if(ev.target.id==="mb")close()});
+  setTimeout(()=>$("#kQtd").focus(),30);
+  $("#mSave").onclick=()=>{const v=$("#kQtd").value.trim();if(v===""||isNaN(parseNum(v))){toast("Informe a quantidade contada");$("#kQtd").focus();return}
+    const q=parseNum(v);const dif=Math.round((q-saldoEstoque(e))*100)/100;
+    put("estoque",Object.assign({},e,{quantidade:q,dataContagem:$("#kData").value||today(),atualizado:new Date().toISOString()}));close();render();
+    toast(dif?`Contagem salva (${dif>0?"+":""}${numFmt(dif)} ${e.unidade||""} em relação ao previsto)`:"Contagem salva")}}
 function openCompra(id){
   const e=S.estoque[id];const root=$("#modalRoot");const fin=can("fin");
   root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><header><h2 id="mt">Chegou compra · ${esc(e.item)}</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
@@ -1516,7 +1537,7 @@ function openCompra(id){
   setTimeout(()=>$("#cQtd").focus(),30);
   $("#mSave").onclick=()=>{const q=parseNum($("#cQtd").value);if(!(q>0)){toast("Informe a quantidade recebida");$("#cQtd").focus();return}
     const v=$("#cValor")?parseNum($("#cValor").value):0;const forn=$("#cForn").value.trim();const data=$("#cData").value||today();
-    const novo=Object.assign({},e,{quantidade:Math.round((parseNum(e.quantidade)+q)*1000)/1000,fornecedor:forn||e.fornecedor||"",ultimaCompra:data});if(v>0)novo.custoUnit=Math.round(v/q*100)/100;put("estoque",novo);
+    const novo=Object.assign({},e,{quantidade:Math.round((saldoEstoque(e)+q)*1000)/1000,dataContagem:today(),fornecedor:forn||e.fornecedor||"",ultimaCompra:data});if(v>0)novo.custoUnit=Math.round(v/q*100)/100;put("estoque",novo);
     if(fin&&v>0&&$("#cLanc")&&$("#cLanc").checked){const cat=e.categoria;const c=["Ração","Feno","Silagem","Óleo","Suplemento"].includes(cat)?"Compra de alimentos":cat==="Medicamento"?"Medicamentos":cat==="Cama"?"Cama / maravalha":cat==="Ferragem"?"Ferrageamento":"Outras saídas";
       put("lancamentos",{id:uid(),tipo:"Saída",data,categoria:L("saida").includes(c)?c:"Outras saídas",valor:v,descricao:`${numFmt(q)} ${e.unidade||""} de ${e.item}${forn?" · "+forn:""}`,situacao:"Pago",atualizado:new Date().toISOString()})}
     close();render();toast("Estoque atualizado")};
