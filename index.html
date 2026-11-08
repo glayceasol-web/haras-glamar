@@ -268,7 +268,7 @@ td:has(.thumb){padding-block:5px;width:56px}
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot" id="sideFoot"></div>
-    <div style="font-size:11px;color:var(--side-muted);padding:6px 18px 12px;opacity:.8" id="versao">Versão 07/11 · 21h40</div>
+    <div style="font-size:11px;color:var(--side-muted);padding:6px 18px 12px;opacity:.8" id="versao">Versão 08/11 · 13h45</div>
   </aside>
   <main class="main">
     <div class="topbar">
@@ -351,7 +351,8 @@ const arr=c=>Object.values(S[c]);
 
 /* ---------- armazenamento: banco do artifact ou navegador ---------- */
 let DB=null, backend="local", writeChain=Promise.resolve();
-function queue(fn){writeChain=writeChain.then(fn).catch(e=>{console.error(e);toast("Não foi possível salvar. Verifique a conexão e tente de novo.")});return writeChain}
+function queue(fn){writeChain=writeChain.then(fn).catch(e=>{console.error(e);toast("Não foi possível salvar: "+(e&&e.message?e.message:"verifique a conexão")+". Tente de novo.")});return writeChain}
+window.addEventListener("error",ev=>{try{toast("Erro: "+(ev.message||"desconhecido")+" — mande um print para o suporte")}catch(e){}});
 function saveLocal(){const o={cfg:S.cfg};COLS.forEach(c=>o[c]=S[c]);lsSet("glamar-dados",JSON.stringify(o))}
 function loadLocal(){try{const o=JSON.parse(lsGet("glamar-dados")||"null");if(!o)return false;if(o.cfg)S.cfg=mergeCfg(o.cfg);COLS.forEach(c=>S[c]=o[c]||{});return true}catch(e){return false}}
 function mergeCfg(c){const m=JSON.parse(JSON.stringify(DEFAULT_CFG));Object.assign(m,c||{});m.listas=Object.assign({},DEFAULT_CFG.listas,(c&&c.listas)||{});return m}
@@ -466,9 +467,11 @@ const isoBR=t=>{t=String(t||"").trim();const m=t.match(/^(\d{1,2})\/(\d{1,2})\/(
 function dosesDe(e){return (e.doses||[]).map(x=>({desde:isoBR(x.desde),q:parseNum(x.dose),txt:x.prescricao||""})).filter(x=>x.desde&&x.q>0).sort((a,b)=>a.desde.localeCompare(b.desde))}
 function doseEm(e,d){const ds=dosesDe(e);let r=null;ds.forEach(x=>{if(x.desde<=d)r=x});return r?{q:r.q,txt:r.txt,desde:r.desde,prox:ds.find(x=>x.desde>d)}:{q:parseNum(e.consumoAnimalDia),txt:e.prescricao||"",prox:ds.find(x=>x.desde>d)}}
 const doseHoje=e=>doseEm(e,today()).q;
-function itensDieta(){return arr("estoque").filter(e=>Array.isArray(e.consomem)&&e.consomem.length&&(parseNum(e.consumoAnimalDia)>0||dosesDe(e).length))}
+function itensDieta(){return arr("estoque").filter(e=>Array.isArray(e.consomem)&&e.consomem.length&&(parseNum(e.consumoAnimalDia)>0||parseNum(e.consumoDiaFixo)>0||dosesDe(e).length))}
 function diasDieta(e){const ini=e.inicioConsumo||today();let n=0;for(let d=ini,k=0;d<=today()&&k<4000;d=addDias(d,1),k++)if(inPeriod(d))n++;return n}
-function custoItemPer(e){const ini=e.inicioConsumo||today();const c=parseNum(e.custoUnit);let v=0;for(let d=ini,k=0;d<=today()&&k<4000;d=addDias(d,1),k++)if(inPeriod(d))v+=doseEm(e,d).q*c;return v}
+function nConsomem(e){return (Array.isArray(e.consomem)&&e.consomem.length)?e.consomem.filter(id=>S.animais[id]&&(S.animais[id].status||"Ativo")==="Ativo").length:(parseNum(e.nAnimais)||animaisAtivos().length)}
+function qAnimal(e,d){const fx=parseNum(e.consumoDiaFixo);if(fx>0){const n=nConsomem(e);return n?fx/n:0}return doseEm(e,d).q}
+function custoItemPer(e){const ini=e.inicioConsumo||today();const c=parseNum(e.custoUnit);let v=0;for(let d=ini,k=0;d<=today()&&k<4000;d=addDias(d,1),k++)if(inPeriod(d))v+=qAnimal(e,d)*c;return v}
 function custoDieta(){const por={};let tot=0;itensDieta().forEach(e=>{const v=custoItemPer(e);if(!v)return;
   e.consomem.forEach(id=>{const a=S.animais[id];if(!a||(a.status||"Ativo")!=="Ativo")return;por[id]=(por[id]||0)+v;tot+=v})});return{por,tot}}
 const dietaIds=()=>new Set(itensDieta().map(e=>e.id));
@@ -818,7 +821,8 @@ function openForm(col,id,preset){
   const firstInput=form.querySelector("input,select,textarea");if(firstInput)setTimeout(()=>firstInput.focus(),30);
   form.addEventListener("submit",e=>{e.preventDefault();$("#mSave").click()});
   if(!can("edit")){form.querySelectorAll("input,select,textarea,button").forEach(x=>x.disabled=true);return}
-  $("#mSave").onclick=()=>{
+  $("#mSave").onclick=()=>{try{salvarForm()}catch(err){console.error(err);toast("Erro ao salvar: "+err.message)}};
+  const salvarForm=()=>{
     const data=readForm(form,m.fields);
     const miss=m.fields.filter(f=>f.req&&(data[f.k]===""||data[f.k]===undefined||(Array.isArray(data[f.k])&&!data[f.k].length)));
     form.querySelectorAll(".field").forEach(x=>x.style.removeProperty("--x"));
@@ -1006,15 +1010,15 @@ V.alimentacao=()=>{
   const dI=dietaIds();const tot=rows.filter(a=>!dI.has(a.estoqueId)).reduce((s,a)=>s+alimTotal(a),0)+custoDieta().tot;
   itensDieta().forEach(e=>{const v=custoItemPer(e)*e.consomem.filter(id=>S.animais[id]&&(S.animais[id].status||"Ativo")==="Ativo").length;if(v)porAl[e.item]=(porAl[e.item]||0)+v});
   const dieta=itensDieta();const nomesA=ids=>ids.map(id=>S.animais[id]).filter(a=>a&&(a.status||"Ativo")==="Ativo").map(a=>a.apelido||a.nome.split(" ")[0]);
-  const dietaH=dieta.length?`<section class="panel" style="margin-bottom:16px"><h2>Dieta diária <small>o custo entra sozinho em cada animal</small></h2><div class="list">${dieta.map(e=>{const ns=nomesA(e.consomem);const dia=doseHoje(e);return `<div class="row" data-open="estoque:${esc(e.id)}" style="cursor:pointer"><div><div><strong>${esc(e.item)}</strong> · ${numFmt(dia)} ${esc(e.unidade||"")} por animal/dia${e.obsDieta?` <span style="color:var(--muted)">(${esc(e.obsDieta)})</span>`:""}</div><div class="sub">${ns.length} animais: ${esc(ns.join(", "))}</div></div>${can("fin")?`<div class="num" style="text-align:right">${money(dia*parseNum(e.custoUnit))}<div class="sub">por animal/dia</div></div>`:""}</div>`}).join("")}</div></section>`:"";
+  const dietaH=dieta.length?`<section class="panel" style="margin-bottom:16px"><h2>Dieta diária <small>o custo entra sozinho em cada animal</small></h2><div class="list">${dieta.map(e=>{const ns=nomesA(e.consomem);const dia=qAnimal(e,today());return `<div class="row" data-open="estoque:${esc(e.id)}" style="cursor:pointer"><div><div><strong>${esc(e.item)}</strong> · ${numFmt(dia)} ${esc(e.unidade||"")} por animal/dia${e.obsDieta?` <span style="color:var(--muted)">(${esc(e.obsDieta)})</span>`:""}</div><div class="sub">${ns.length} animais: ${esc(ns.join(", "))}</div></div>${can("fin")?`<div class="num" style="text-align:right">${money(dia*parseNum(e.custoUnit))}<div class="sub">por animal/dia</div></div>`:""}</div>`}).join("")}</div></section>`:"";
   const asD=animaisAtivos().filter(a=>dieta.some(e=>e.consomem.includes(a.id))).sort((a,b)=>String(a.nome).localeCompare(b.nome));
   const presc=e=>{const d=doseEm(e,today());return (d.txt||e.prescricao||`${numFmt(d.q)} ${e.unidade||""}/dia`)+(d.prox?` · a partir de ${dBR(d.prox.desde)}: ${d.prox.txt||numFmt(d.prox.q)+" "+(e.unidade||"")+"/dia"}`:"")};
-  const cDia=e=>doseHoje(e)*parseNum(e.custoUnit);const fin=can("fin");
+  const cDia=e=>qAnimal(e,today())*parseNum(e.custoUnit);const fin=can("fin");
   const nA=e=>e.consomem.filter(id=>asD.some(a=>a.id===id)).length;
   const totDia=e=>cDia(e)*nA(e);const somaDia=dieta.reduce((t,e)=>t+totDia(e),0);
   const cel=(e,a)=>e.consomem.includes(a.id)?`<td>${esc(presc(e))}${fin&&cDia(e)?`<div class="num" style="font-size:12px;color:var(--muted)">${money(cDia(e))}/dia</div>`:""}</td>`:`<td style="color:var(--muted)">—</td>`;
   const prescH=dieta.length?`<section class="panel" style="margin-bottom:16px"><h2>Prescrição por animal <small>o que cada um recebe${fin?" e quanto custa":""}</small></h2><div class="tablewrap"><table><thead><tr><th>Animal</th>${dieta.map(e=>`<th>${esc(e.item.replace(/\s*\(.*\)\s*$/,""))}</th>`).join("")}${fin?`<th class="r">Custo/dia</th><th class="r">Custo/mês</th>`:""}</tr></thead><tbody>${asD.map(a=>{const d=dieta.reduce((t,e)=>t+(e.consomem.includes(a.id)?cDia(e):0),0);return `<tr><td><strong>${esc(a.nome)}</strong>${a.apelido?` <span style="color:var(--muted)">“${esc(a.apelido)}”</span>`:""}</td>${dieta.map(e=>cel(e,a)).join("")}${fin?`<td class="r num">${money(d)}</td><td class="r num">${money(d*30)}</td>`:""}</tr>`}).join("")}</tbody>${fin?`<tfoot><tr><td>Custo por dia (todos)</td>${dieta.map(e=>`<td class="num">${money(totDia(e))}</td>`).join("")}<td class="r num">${money(somaDia)}</td><td></td></tr><tr><td>Custo por mês (30 dias)</td>${dieta.map(e=>`<td class="num"><strong>${money(totDia(e)*30)}</strong></td>`).join("")}<td></td><td class="r num"><strong>${money(somaDia*30)}</strong></td></tr></tfoot>`:""}</table></div><p class="note" style="margin:8px 0 0">Para mudar a quantidade ou quem recebe, abra o item em Estoque (campos “Prescrição”, “Consumo por animal por dia” e “Quem consome”).${fin?" O mês é estimado em 30 dias.":""}</p></section>`:"";
-  return dietaH+prescH+`<div class="kpis">${!can("fin")?`<div class="kpi"><span class="lbl">Tratos registrados</span><span class="val">${rows.length}</span><span class="hint">${esc(periodLabel())}</span></div>`:`<div class="kpi"><span class="lbl">Custo de alimentação</span><span class="val">${money(tot)}</span><span class="hint">${esc(periodLabel())}, somado até hoje</span></div>${dieta.length?(()=>{const dia=dieta.reduce((s2,e)=>s2+doseHoje(e)*parseNum(e.custoUnit)*e.consomem.filter(id=>S.animais[id]&&(S.animais[id].status||"Ativo")==="Ativo").length,0);return `<div class="kpi"><span class="lbl">Dieta por dia</span><span class="val">${money(dia)}</span><span class="hint">≈ ${money(dia*30)} por mês (30 dias)</span></div>`})():""}`}
+  return dietaH+prescH+`<div class="kpis">${!can("fin")?`<div class="kpi"><span class="lbl">Tratos registrados</span><span class="val">${rows.length}</span><span class="hint">${esc(periodLabel())}</span></div>`:`<div class="kpi"><span class="lbl">Custo de alimentação</span><span class="val">${money(tot)}</span><span class="hint">${esc(periodLabel())}, somado até hoje</span></div>${dieta.length?(()=>{const dia=dieta.reduce((s2,e)=>s2+qAnimal(e,today())*parseNum(e.custoUnit)*e.consomem.filter(id=>S.animais[id]&&(S.animais[id].status||"Ativo")==="Ativo").length,0);return `<div class="kpi"><span class="lbl">Dieta por dia</span><span class="val">${money(dia)}</span><span class="hint">≈ ${money(dia*30)} por mês (30 dias)</span></div>`})():""}`}
   ${!can("fin")?"":Object.entries(porAl).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`<div class="kpi"><span class="lbl">${esc(k)}</span><span class="val">${money(v)}</span></div>`).join("")}</div>
   <p class="note" style="margin:0 0 12px">Aqui você registra o que foi servido (consumo). Ao escolher um item em “Baixar do estoque”, a quantidade sai do estoque automaticamente. A compra do alimento continua sendo lançada em Entradas e saídas.</p>
   ${toolbar("alimentacao",`<button type="button" class="btn" data-csv="alimentacao">Exportar planilha</button>`)}

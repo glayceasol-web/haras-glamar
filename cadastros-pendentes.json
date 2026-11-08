@@ -1,7 +1,7 @@
 {
- "lote": "serragem-15-sacos-2026-11-07",
- "titulo": "Correção da serragem",
- "texto": "Corrige a compra de serragem de 03/11: 15 sacos por R$ 1.500,00 (R$ 100,00 cada), rendendo cerca de 3 meses (1 saco a cada 6 dias). O custo continua dividido entre os animais das baias fechadas. No estoque, o saldo fica em 14 sacos (15 menos o uso desde 03/11) e o alerta continua com menos de 2 sacos.",
+ "lote": "estoque-consumo-2026-11-08",
+ "titulo": "Consumo real de ração, feno e silagem + serragem",
+ "texto": "Acerta o consumo pelo que você usa de verdade: ração 24 sacos de 40 kg por mês (32 kg/dia), feno 6 fardos por dia para todos os cavalos com custo de R$ 1.500,00 por mês já com o capim (R$ 8,33 por fardo), e silagem com meta de 60 sacos por mês (2 por dia; 1 saco ≈ 5 refeições). Silagem com saldo de 6 sacos hoje. O custo de cada animal passa a sair desse consumo real, dividido entre os que comem. Também corrige a serragem de 03/11: 15 sacos por R$ 1.500,00, rende 3 meses.",
  "lancamentos": [
   {
    "id": "serragem-2026-11-03",
@@ -23,8 +23,33 @@
    "consumoDiaFixo": "0.1667",
    "minimo": "2",
    "cobertura": "90",
-   "obs": "Compra de 15 sacos em 03/11/2026 por R$ 1.500,00 (R$ 100,00 cada). Rende cerca de 3 meses (1 saco a cada 6 dias). Alerta quando houver menos de 2 sacos. Saldo de 14 sacos estimado em 07/11; ajuste com a contagem.",
-   "atualizado": "2026-11-07T21:15:00+00:00"
+   "obs": "Compra de 15 sacos em 03/11/2026 por R$ 1.500,00 (R$ 100,00 cada). Rende cerca de 3 meses (1 saco a cada 6 dias). Alerta quando houver menos de 2 sacos. Saldo de 14 sacos estimado em 08/11; ajuste com a contagem.",
+   "atualizado": "2026-11-07T21:15:00+00:00",
+   "dataContagem": "2026-11-08"
+  },
+  {
+   "id": "estoque-racao-equestre-12",
+   "_parcial": 1,
+   "consumoDiaFixo": 32,
+   "obsDieta": "24 sacos de 40 kg por mês (≈ 32 kg por dia para todos)",
+   "atualizado": "2026-11-08T13:40:00+00:00"
+  },
+  {
+   "id": "estoque-feno-tipo-c",
+   "_parcial": 1,
+   "consumoDiaFixo": 6,
+   "custoUnit": 8.33,
+   "obsDieta": "6 fardos por dia para todos os cavalos · R$ 1.500,00 por mês já com o capim",
+   "atualizado": "2026-11-08T13:40:00+00:00"
+  },
+  {
+   "id": "estoque-silagem",
+   "_parcial": 1,
+   "quantidade": 6,
+   "dataContagem": "2026-11-08",
+   "consumoDiaFixo": 2,
+   "obsDieta": "1 saco ≈ 5 refeições · meta de 60 sacos por mês (2 por dia)",
+   "atualizado": "2026-11-08T13:40:00+00:00"
   }
  ]
 }
