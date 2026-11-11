@@ -268,7 +268,7 @@ td:has(.thumb){padding-block:5px;width:56px}
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot" id="sideFoot"></div>
-    <div style="font-size:11px;color:var(--side-muted);padding:6px 18px 12px;opacity:.8" id="versao">Versão 08/11 · 13h45</div>
+    <div style="font-size:11px;color:var(--side-muted);padding:6px 18px 12px;opacity:.8" id="versao">Versão 11/11 · 11h30</div>
   </aside>
   <main class="main">
     <div class="topbar">
@@ -520,10 +520,11 @@ function previsao(e){
   const c=consumoDia(e);const qtd=saldoEstoque(e);const prazo=parseNum(e.prazoEntrega),marg=parseNum(e.margem),cob=parseNum(e.cobertura)||30;
   const abaixoMin=e.minimo!==""&&e.minimo!==undefined&&qtd<parseNum(e.minimo);
   if(!c.v)return{c,semConsumo:true,abaixoMin,diasAtePedir:abaixoMin?0:Infinity};
-  const dias=qtd/c.v;const ate=dias-prazo-marg;
-  const sug=Math.max(0,Math.ceil(c.v*(prazo+cob+marg)-qtd));
+  const cam=parseNum(e.pedidoQtd);const dias=qtd/c.v;const ate=(qtd+cam)/c.v-prazo-marg;
+  const sug=Math.max(0,Math.ceil(c.v*(prazo+cob+marg)-qtd-cam));
   return{c,dias,acaba:addDias(today(),Math.floor(dias)),pedirEm:addDias(today(),Math.max(0,Math.floor(ate))),diasAtePedir:abaixoMin?Math.min(0,ate):ate,sug,abaixoMin}}
 function statusPedido(e){const p=previsao(e);
+  if(parseNum(e.pedidoQtd)>0&&p.diasAtePedir>0)return{cls:"warn",txt:"A caminho (pedido "+dBR(e.pedidoData).slice(0,5)+")",p,caminho:1};
   if(p.diasAtePedir<=0)return{cls:"out",txt:"Pedir agora",p};
   if(p.semConsumo)return{cls:"neutral",txt:"Informe o consumo",p};
   if(p.diasAtePedir<=7)return{cls:"warn",txt:`Pedir em ${Math.ceil(p.diasAtePedir)} dia${Math.ceil(p.diasAtePedir)>1?"s":""}`,p};
@@ -959,6 +960,7 @@ function painelBase(){
     ${(()=>{const lim=addDias(today(),30);const ps=[];arr("compras").forEach(c=>parcelas(c).forEach(p=>{if(!p.paga&&p.data&&p.data<=lim)ps.push({c,p})}));ps.sort((a,b)=>a.p.data.localeCompare(b.p.data));
       return ps.length?`<section class="panel"><h2>Parcelas a vencer <small>próximos 30 dias</small></h2><div class="list">${ps.slice(0,6).map(({c,p})=>`<div class="row" data-parcelas="${esc(c.id)}" style="cursor:pointer"><div><div>${esc(c.descricao)}</div><div class="sub">parcela ${p.n}/${parseNum(c.nParcelas)||1} · ${money(p.valor)}</div></div><span class="pill ${p.data<today()?"out":"warn"}">${dBR(p.data)}</span></div>`).join("")}</div></section>`:""})()}`:""}
     <section class="panel"><h2>Próximas tarefas</h2>${pend.length?`<div class="list">${pend.slice(0,6).map(t=>`<div class="row" data-open="tarefas:${esc(t.id)}" style="cursor:pointer"><div><div>${esc(t.titulo)}</div><div class="sub">${esc(t.tipo||"")}${t.animal?" · "+esc(animalNome(t.animal)):""}</div></div><span class="pill ${t.data&&t.data<today()?"out":"neutral"}">${dBR(t.data)}</span></div>`).join("")}</div>`:`<p class="empty">Nenhuma tarefa pendente.</p>`}</section>
+    ${(()=>{const cam=arr("estoque").filter(e=>parseNum(e.pedidoQtd)>0).sort((a,b)=>String(a.pedidoData).localeCompare(b.pedidoData));return cam.length?`<section class="panel"><h2>Pedidos a caminho <small>marque quando chegar</small></h2><div class="list">${cam.map(e=>`<div class="row"><div><div>${esc(e.item)}</div><div class="sub">${numFmt(e.pedidoQtd)} ${esc(e.unidade||"")} · pedido em ${dBR(e.pedidoData)}${e.pedidoObs?" · "+esc(e.pedidoObs):""}</div></div>${can("edit")?`<button type="button" class="btn small primary" data-compra="${esc(e.id)}">Chegou</button>`:`<span class="pill warn">A caminho</span>`}</div>`).join("")}</div></section>`:""})()}
     <section class="panel"><h2>Hora de pedir <small>ração, feno, silagem, óleo…</small></h2>${pedidos.length?`<div class="list">${pedidos.slice(0,7).map(({e,s})=>`<div class="row" data-open="estoque:${esc(e.id)}" style="cursor:pointer"><div><div>${esc(e.item)}</div><div class="sub">${s.p.semConsumo?`saldo ${numFmt(saldoEstoque(e))} ${esc(e.unidade||"")} · abaixo do mínimo`:`saldo hoje ${numFmt(saldoEstoque(e))} ${esc(e.unidade||"")} · dura até ${dBR(s.p.acaba)}${s.p.sug?` · pedir ${numFmt(s.p.sug)} ${esc(e.unidade||"")}`:""}`}</div></div><span class="pill ${s.cls}">${s.txt}</span></div>`).join("")}</div><p style="margin:10px 0 0"><a href="#estoque">Ver estoque completo</a></p>`:`<p class="empty">Cadastre os itens do estoque com o consumo por dia para o sistema avisar quando pedir.</p>`}</section>
     ${fin?`<section class="panel" style="grid-column:1/-1"><h2>Custo por animal <small>${esc(periodLabel())} · os 5 maiores</small></h2>${cpa.linhas.length?`<div class="bars">${cpa.linhas.slice(0,5).map(l=>`<div class="bar-row"><span class="name">${esc(l.animal.nome)}</span><span class="track"><span class="fill" style="display:block;background:var(--brand);width:${Math.max(2,l.total/(cpa.linhas[0].total||1)*100)}%"></span></span><span class="num">${money(l.total)}</span></div>`).join("")}</div><p style="margin:12px 0 0"><a href="#custos">Ver detalhamento completo</a></p>`:`<p class="empty">Cadastre os animais para ver o custo de cada um.</p>`}</section>`:""}
   </div>`;
@@ -1073,12 +1075,12 @@ V.estoque=()=>{
   ${toolbar("estoque",`<button type="button" class="btn" data-csv="estoque">Exportar planilha</button>`)}
   ${tableView("estoque",[
     {l:"Item",h:x=>`<strong>${esc(x.item)}</strong><div style="font-size:12.5px;color:var(--muted)">${esc(x.categoria||"")}${x.fornecedor?" · "+esc(x.fornecedor):""}</div>`,v:x=>x.item},
-    {l:"Saldo hoje",r:1,h:x=>autoConsumo(x)?`<span class="num"><strong>${numFmt(saldoEstoque(x))}</strong> ${esc(x.unidade||"")}</span><div style="font-size:12.5px;color:var(--muted)">contado ${numFmt(x.quantidade)} em ${dBR(dataContagem(x))}${usadoDesde(x)?` · usou ${numFmt(Math.round(usadoDesde(x)*100)/100)}`:""}</div>`:`<span class="num">${numFmt(x.quantidade)} ${esc(x.unidade||"")}</span>`,v:x=>saldoEstoque(x)},
+    {l:"Saldo hoje",r:1,h:x=>(parseNum(x.pedidoQtd)>0?`<div style="font-size:12.5px;color:var(--warn)">+ ${numFmt(x.pedidoQtd)} ${esc(x.unidade||"")} a caminho</div>`:"")+(autoConsumo(x)?`<span class="num"><strong>${numFmt(saldoEstoque(x))}</strong> ${esc(x.unidade||"")}</span><div style="font-size:12.5px;color:var(--muted)">contado ${numFmt(x.quantidade)} em ${dBR(dataContagem(x))}${usadoDesde(x)?` · usou ${numFmt(Math.round(usadoDesde(x)*100)/100)}`:""}</div>`:`<span class="num">${numFmt(x.quantidade)} ${esc(x.unidade||"")}</span>`),v:x=>saldoEstoque(x)},
     {l:"Consumo / dia",r:1,h:x=>x._s.p.c.v?`<span class="num" title="${esc(x._s.p.c.fonte)}">${numFmt(x._s.p.c.v)} ${esc(x.unidade||"")}</span>`:`<span style="color:var(--muted)">—</span>`},
     {l:"Dura até",h:x=>x._s.p.acaba?`<span class="num">${dBR(x._s.p.acaba)}</span> <span style="color:var(--muted);font-size:12.5px">(${Math.floor(x._s.p.dias)} d)</span>`:""},
     {l:"Pedido",h:x=>`<span class="pill ${x._s.cls}">${x._s.txt}</span>`},
     {l:"Sugestão de compra",r:1,h:x=>x._s.p.sug?`<span class="num">${numFmt(x._s.p.sug)} ${esc(x.unidade||"")}</span>${parseNum(x.custoUnit)&&can("fin")?`<div style="font-size:12.5px;color:var(--muted)" class="num">≈ ${money(x._s.p.sug*parseNum(x.custoUnit))}</div>`:""}`:""},
-    {l:"",h:x=>can("edit")?`<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="btn small" data-contagem="${esc(x.id)}">Contagem</button><button type="button" class="btn small" data-compra="${esc(x.id)}">Chegou compra</button></div>`:""}
+    {l:"",h:x=>can("edit")?`<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="btn small" data-contagem="${esc(x.id)}">Contagem</button>${parseNum(x.pedidoQtd)>0?"":`<button type="button" class="btn small" data-pedido="${esc(x.id)}">Fiz pedido</button>`}<button type="button" class="btn small${parseNum(x.pedidoQtd)>0?" primary":""}" data-compra="${esc(x.id)}">Chegou compra</button></div>`:""}
   ],rows,{vazio:"Nenhum item no estoque."})}`;
 };
 // Ferrageamento: de quanto em quanto tempo cada animal precisa ferrar / casquear
@@ -1462,6 +1464,7 @@ view.addEventListener("click",async e=>{
   const feita=t.closest("[data-feita]");if(feita){const x=S.tarefas[feita.dataset.feita];put("tarefas",Object.assign({},x,{status:"Feita"}));render();toast("Tarefa concluída");return}
   const lan=t.closest("[data-lancar]");if(lan){const x=S.tarefas[lan.dataset.lancar];const cat=L("saida").find(c=>c.toLowerCase().includes((x.tipo||"").toLowerCase().slice(0,6)))||(x.tipo==="Vacina"||x.tipo==="Vermifugação"?"Medicamentos":"Outras saídas");put("tarefas",Object.assign({},x,{lancado:true}));openForm("lancamentos",null,{tipo:"Saída",data:x.data,valor:x.custo,descricao:x.titulo,animal:x.animal||"",categoria:L("saida").includes(cat)?cat:"",situacao:"Pendente"});return}
   const ct=t.closest("[data-contagem]");if(ct){abrirContagem(ct.dataset.contagem);return}
+  const pd=t.closest("[data-pedido]");if(pd){abrirPedido(pd.dataset.pedido);return}
   const pa=t.closest("[data-parcelas]");if(pa){abrirParcelas(pa.dataset.parcelas);return}
   const pv=t.closest("[data-ped-ver]");if(pv){abrirGenealogia(S.reproducao[pv.dataset.pedVer]);return}
   const fr=t.closest("[data-frep]");if(fr){UI.filtro.rep=fr.dataset.frep;render();return}
@@ -1514,6 +1517,25 @@ view.addEventListener("click",async e=>{
 });
 
 /* ---------- chegada de compra ---------- */
+function abrirPedido(id){
+  const e=S.estoque[id];const root=$("#modalRoot");const fin=can("fin");
+  root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><header><h2 id="mt">Fiz pedido · ${esc(e.item)}</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
+  <form id="mf" novalidate>
+    <p class="note full" style="margin:0">O pedido fica “a caminho” e não entra no saldo. Quando chegar, clique em “Chegou” e ele soma ao estoque.</p>
+    <div class="field"><label for="pQtd">Quantidade pedida (${esc(e.unidade||"")}) *</label><input id="pQtd" type="text" inputmode="decimal"></div>
+    <div class="field"><label for="pData">Data do pedido</label><input id="pData" type="date" value="${today()}"></div>
+    ${fin?`<div class="field"><label for="pValor">Valor total (R$)</label><input id="pValor" type="text" inputmode="decimal" placeholder="0,00"></div>`:""}
+    <div class="field"><label for="pObs">Observação</label><input id="pObs" type="text" placeholder="Ex.: 7 sacos, fornecedor, previsão de entrega"></div>
+    ${fin?`<div class="field check full"><input type="checkbox" id="pLanc" checked><label for="pLanc">Lançar a saída agora em Entradas e saídas</label></div>`:""}
+  </form><footer><div class="right"><button type="button" class="btn" id="mCancel">Cancelar</button><button type="button" class="btn primary" id="mSave">Salvar pedido</button></div></footer></div></div>`;
+  const close=()=>{root.innerHTML=""};$("#mClose").onclick=close;$("#mCancel").onclick=close;$("#mb").addEventListener("mousedown",ev=>{if(ev.target.id==="mb")close()});
+  setTimeout(()=>$("#pQtd").focus(),30);
+  $("#mSave").onclick=()=>{const q=parseNum($("#pQtd").value);if(!(q>0)){toast("Informe a quantidade pedida");$("#pQtd").focus();return}
+    const v=$("#pValor")?parseNum($("#pValor").value):0;const data=$("#pData").value||today();const obs=$("#pObs").value.trim();const lan=!!(fin&&v>0&&$("#pLanc")&&$("#pLanc").checked);
+    put("estoque",Object.assign({},e,{pedidoQtd:q,pedidoData:data,pedidoObs:obs,pedidoValor:v||"",pedidoLancado:lan?1:"",atualizado:new Date().toISOString()}));
+    if(lan){const cat=e.categoria;const c=["Ração","Feno","Silagem","Óleo","Suplemento"].includes(cat)?"Compra de alimentos":cat==="Medicamento"?"Medicamentos":cat==="Cama"?"Cama / maravalha":"Outras saídas";
+      put("lancamentos",{id:uid(),tipo:"Saída",data,categoria:L("saida").includes(c)?c:"Outras saídas",valor:v,descricao:`Pedido: ${numFmt(q)} ${e.unidade||""} de ${e.item}${obs?" · "+obs:""}`,situacao:"Pago",atualizado:new Date().toISOString()})}
+    close();render();toast("Pedido salvo. Clique em “Chegou” quando receber.")}}
 function abrirContagem(id){
   const e=S.estoque[id];const root=$("#modalRoot");
   root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><header><h2 id="mt">Contagem · ${esc(e.item)}</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
@@ -1529,20 +1551,20 @@ function abrirContagem(id){
     put("estoque",Object.assign({},e,{quantidade:q,dataContagem:$("#kData").value||today(),atualizado:new Date().toISOString()}));close();render();
     toast(dif?`Contagem salva (${dif>0?"+":""}${numFmt(dif)} ${e.unidade||""} em relação ao previsto)`:"Contagem salva")}}
 function openCompra(id){
-  const e=S.estoque[id];const root=$("#modalRoot");const fin=can("fin");
+  const e=S.estoque[id];const root=$("#modalRoot");const fin=can("fin");const pq=parseNum(e.pedidoQtd);
   root.innerHTML=`<div class="modal-back" id="mb"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><header><h2 id="mt">Chegou compra · ${esc(e.item)}</h2><button type="button" class="btn ghost small" id="mClose" aria-label="Fechar">✕</button></header>
   <form id="mf" novalidate>
-    <div class="field"><label for="cQtd">Quantidade recebida (${esc(e.unidade||"")}) *</label><input id="cQtd" type="text" inputmode="decimal"></div>
+    <div class="field"><label for="cQtd">Quantidade recebida (${esc(e.unidade||"")}) *</label><input id="cQtd" type="text" inputmode="decimal" value="${pq>0?String(pq).replace(".",","):""}">${pq>0?`<span class="help">Pedido de ${dBR(e.pedidoData)}${e.pedidoObs?" · "+esc(e.pedidoObs):""}</span>`:""}</div>
     <div class="field"><label for="cData">Data</label><input id="cData" type="date" value="${today()}"></div>
-    ${fin?`<div class="field"><label for="cValor">Valor total pago (R$)</label><input id="cValor" type="text" inputmode="decimal" placeholder="0,00"><span class="help">Atualiza o custo por unidade do item.</span></div>`:""}
+    ${fin?`<div class="field"><label for="cValor">Valor total pago (R$)</label><input id="cValor" type="text" inputmode="decimal" placeholder="0,00" value="${pq>0&&parseNum(e.pedidoValor)?String(parseNum(e.pedidoValor)).replace(".",","):""}"><span class="help">Atualiza o custo por unidade do item.</span></div>`:""}
     <div class="field"><label for="cForn">Fornecedor</label><input id="cForn" type="text" value="${esc(e.fornecedor||"")}"></div>
-    ${fin?`<div class="field check full"><input type="checkbox" id="cLanc" checked><label for="cLanc">Lançar como saída em Entradas e saídas</label></div>`:""}
+    ${fin?`<div class="field check full"><input type="checkbox" id="cLanc"${pq>0&&e.pedidoLancado?"":" checked"}><label for="cLanc">Lançar como saída em Entradas e saídas${pq>0&&e.pedidoLancado?" (já foi lançada no dia do pedido)":""}</label></div>`:""}
   </form><footer><div class="right"><button type="button" class="btn" id="mCancel">Cancelar</button><button type="button" class="btn primary" id="mSave">Somar ao estoque</button></div></footer></div></div>`;
   const close=()=>{root.innerHTML=""};$("#mClose").onclick=close;$("#mCancel").onclick=close;$("#mb").addEventListener("mousedown",ev=>{if(ev.target.id==="mb")close()});
   setTimeout(()=>$("#cQtd").focus(),30);
   $("#mSave").onclick=()=>{const q=parseNum($("#cQtd").value);if(!(q>0)){toast("Informe a quantidade recebida");$("#cQtd").focus();return}
     const v=$("#cValor")?parseNum($("#cValor").value):0;const forn=$("#cForn").value.trim();const data=$("#cData").value||today();
-    const novo=Object.assign({},e,{quantidade:Math.round((saldoEstoque(e)+q)*1000)/1000,dataContagem:today(),fornecedor:forn||e.fornecedor||"",ultimaCompra:data});if(v>0)novo.custoUnit=Math.round(v/q*100)/100;put("estoque",novo);
+    const novo=Object.assign({},e,{quantidade:Math.round((saldoEstoque(e)+q)*1000)/1000,dataContagem:today(),fornecedor:forn||e.fornecedor||"",ultimaCompra:data,pedidoQtd:"",pedidoData:"",pedidoObs:"",pedidoValor:"",pedidoLancado:""});if(v>0)novo.custoUnit=Math.round(v/q*100)/100;put("estoque",novo);
     if(fin&&v>0&&$("#cLanc")&&$("#cLanc").checked){const cat=e.categoria;const c=["Ração","Feno","Silagem","Óleo","Suplemento"].includes(cat)?"Compra de alimentos":cat==="Medicamento"?"Medicamentos":cat==="Cama"?"Cama / maravalha":cat==="Ferragem"?"Ferrageamento":"Outras saídas";
       put("lancamentos",{id:uid(),tipo:"Saída",data,categoria:L("saida").includes(c)?c:"Outras saídas",valor:v,descricao:`${numFmt(q)} ${e.unidade||""} de ${e.item}${forn?" · "+forn:""}`,situacao:"Pago",atualizado:new Date().toISOString()})}
     close();render();toast("Estoque atualizado")};

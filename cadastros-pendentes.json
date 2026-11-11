@@ -1,7 +1,7 @@
 {
- "lote": "estoque-consumo-2026-11-08",
- "titulo": "Consumo real de ração, feno e silagem + serragem",
- "texto": "Acerta o consumo pelo que você usa de verdade: ração 24 sacos de 40 kg por mês (32 kg/dia), feno 6 fardos por dia para todos os cavalos com custo de R$ 1.500,00 por mês já com o capim (R$ 8,33 por fardo), e silagem com meta de 60 sacos por mês (2 por dia; 1 saco ≈ 5 refeições). Silagem com saldo de 6 sacos hoje. O custo de cada animal passa a sair desse consumo real, dividido entre os que comem. Também corrige a serragem de 03/11: 15 sacos por R$ 1.500,00, rende 3 meses.",
+ "lote": "pedido-racao-2026-11-11",
+ "titulo": "Pedido de ração a caminho + consumo real",
+ "texto": "Registra o pedido de hoje (11/11): 7 sacos de ração Equestre 12% pelet 40 kg (280 kg) a R$ 83,50, total R$ 584,50, já lançado em Entradas e saídas. A ração fica “a caminho” e só entra no estoque quando você clicar em “Chegou”. Acerta o consumo pelo que você usa de verdade: ração 24 sacos de 40 kg por mês (32 kg/dia), feno 6 fardos por dia para todos os cavalos com custo de R$ 1.500,00 por mês já com o capim (R$ 8,33 por fardo), e silagem com meta de 60 sacos por mês (2 por dia; 1 saco ≈ 5 refeições). Silagem com saldo de 6 sacos hoje. O custo de cada animal passa a sair desse consumo real, dividido entre os que comem. Também corrige a serragem de 03/11: 15 sacos por R$ 1.500,00, rende 3 meses.",
  "lancamentos": [
   {
    "id": "serragem-2026-11-03",
@@ -10,6 +10,17 @@
    "descricao": "15 sacos de serragem (R$ 100 cada)",
    "obs": "15 sacos por R$ 1.500,00 (R$ 100,00 por saco). Entregue em 03/11/2026. Rende cerca de 3 meses. Custo dividido entre os animais das baias fechadas.",
    "atualizado": "2026-11-07T21:15:00+00:00"
+  },
+  {
+   "id": "pedido-racao-2026-11-11",
+   "tipo": "Saída",
+   "data": "2026-11-11",
+   "categoria": "Compra de alimentos",
+   "valor": 584.5,
+   "descricao": "Pedido: 7 sacos de ração Equestre 12% pelet 40 kg (280 kg)",
+   "situacao": "Pago",
+   "obs": "R$ 83,50 por saco. Pedido em 11/11/2026; aguardando entrega.",
+   "atualizado": "2026-11-11T14:30:00+00:00"
   }
  ],
  "estoque": [
@@ -32,7 +43,12 @@
    "_parcial": 1,
    "consumoDiaFixo": 32,
    "obsDieta": "24 sacos de 40 kg por mês (≈ 32 kg por dia para todos)",
-   "atualizado": "2026-11-08T13:40:00+00:00"
+   "atualizado": "2026-11-11T14:30:00+00:00",
+   "pedidoQtd": 280,
+   "pedidoData": "2026-11-11",
+   "pedidoObs": "7 sacos de 40 kg a R$ 83,50",
+   "pedidoValor": 584.5,
+   "pedidoLancado": 1
   },
   {
    "id": "estoque-feno-tipo-c",
