@@ -1,7 +1,7 @@
 {
- "lote": "pedido-racao-2026-11-11",
- "titulo": "Pedido de ração a caminho + consumo real",
- "texto": "Registra o pedido de hoje (11/11): 7 sacos de ração Equestre 12% pelet 40 kg (280 kg) a R$ 83,50, total R$ 584,50, já lançado em Entradas e saídas. A ração fica “a caminho” e só entra no estoque quando você clicar em “Chegou”. Acerta o consumo pelo que você usa de verdade: ração 24 sacos de 40 kg por mês (32 kg/dia), feno 6 fardos por dia para todos os cavalos com custo de R$ 1.500,00 por mês já com o capim (R$ 8,33 por fardo), e silagem com meta de 60 sacos por mês (2 por dia; 1 saco ≈ 5 refeições). Silagem com saldo de 6 sacos hoje. O custo de cada animal passa a sair desse consumo real, dividido entre os que comem. Também corrige a serragem de 03/11: 15 sacos por R$ 1.500,00, rende 3 meses.",
+ "lote": "ferrageamento-2026-11-11",
+ "titulo": "Ferrageamento de hoje + pedido de ração + consumo real",
+ "texto": "Ferrageamento de hoje (11/11): Sarabi, Isla, Mione e Bela a R$ 180,00 cada e Abadon a R$ 120,00 (total R$ 840,00), no custo de cada animal e em Entradas e saídas. Registra o pedido de hoje (11/11): 7 sacos de ração Equestre 12% pelet 40 kg (280 kg) a R$ 83,50, total R$ 584,50, já lançado em Entradas e saídas. A ração fica “a caminho” e só entra no estoque quando você clicar em “Chegou”. Acerta o consumo pelo que você usa de verdade: ração 24 sacos de 40 kg por mês (32 kg/dia), feno 6 fardos por dia para todos os cavalos com custo de R$ 1.500,00 por mês já com o capim (R$ 8,33 por fardo), e silagem com meta de 60 sacos por mês (2 por dia; 1 saco ≈ 5 refeições). Silagem com saldo de 6 sacos hoje. O custo de cada animal passa a sair desse consumo real, dividido entre os que comem. Também corrige a serragem de 03/11: 15 sacos por R$ 1.500,00, rende 3 meses.",
  "lancamentos": [
   {
    "id": "serragem-2026-11-03",
@@ -21,6 +21,61 @@
    "situacao": "Pago",
    "obs": "R$ 83,50 por saco. Pedido em 11/11/2026; aguardando entrega.",
    "atualizado": "2026-11-11T14:30:00+00:00"
+  },
+  {
+   "id": "ferr-lanc-2026-11-11-abqm-M285036",
+   "tipo": "Saída",
+   "data": "2026-11-11",
+   "categoria": "Ferrageamento",
+   "valor": 180,
+   "animal": "abqm-M285036",
+   "descricao": "Ferrageamento · Crystal Doc Gim (Sarabi)",
+   "situacao": "Pago",
+   "atualizado": "2026-11-11T15:20:00+00:00"
+  },
+  {
+   "id": "ferr-lanc-2026-11-11-abccmm-0249580",
+   "tipo": "Saída",
+   "data": "2026-11-11",
+   "categoria": "Ferrageamento",
+   "valor": 180,
+   "animal": "abccmm-0249580",
+   "descricao": "Ferrageamento · Isla P.B.R.",
+   "situacao": "Pago",
+   "atualizado": "2026-11-11T15:20:00+00:00"
+  },
+  {
+   "id": "ferr-lanc-2026-11-11-abccmm-0248320",
+   "tipo": "Saída",
+   "data": "2026-11-11",
+   "categoria": "Ferrageamento",
+   "valor": 180,
+   "animal": "abccmm-0248320",
+   "descricao": "Ferrageamento · Mione 4LG",
+   "situacao": "Pago",
+   "atualizado": "2026-11-11T15:20:00+00:00"
+  },
+  {
+   "id": "ferr-lanc-2026-11-11-abccmm-0249987",
+   "tipo": "Saída",
+   "data": "2026-11-11",
+   "categoria": "Ferrageamento",
+   "valor": 180,
+   "animal": "abccmm-0249987",
+   "descricao": "Ferrageamento · Bela do Magnus",
+   "situacao": "Pago",
+   "atualizado": "2026-11-11T15:20:00+00:00"
+  },
+  {
+   "id": "ferr-lanc-2026-11-11-abadon-glamar",
+   "tipo": "Saída",
+   "data": "2026-11-11",
+   "categoria": "Ferrageamento",
+   "valor": 120,
+   "animal": "abadon-glamar",
+   "descricao": "Ferrageamento · Abadon Glamar",
+   "situacao": "Pago",
+   "atualizado": "2026-11-11T15:20:00+00:00"
   }
  ],
  "estoque": [
@@ -66,6 +121,58 @@
    "consumoDiaFixo": 2,
    "obsDieta": "1 saco ≈ 5 refeições · meta de 60 sacos por mês (2 por dia)",
    "atualizado": "2026-11-08T13:40:00+00:00"
+  }
+ ],
+ "cascos": [
+  {
+   "id": "ferr-2026-11-11-abqm-M285036",
+   "data": "2026-11-11",
+   "animal": "abqm-M285036",
+   "servico": "Ferrageamento",
+   "patas": "As 4 patas",
+   "valor": 180,
+   "lancado": true,
+   "atualizado": "2026-11-11T15:20:00+00:00"
+  },
+  {
+   "id": "ferr-2026-11-11-abccmm-0249580",
+   "data": "2026-11-11",
+   "animal": "abccmm-0249580",
+   "servico": "Ferrageamento",
+   "patas": "As 4 patas",
+   "valor": 180,
+   "lancado": true,
+   "atualizado": "2026-11-11T15:20:00+00:00"
+  },
+  {
+   "id": "ferr-2026-11-11-abccmm-0248320",
+   "data": "2026-11-11",
+   "animal": "abccmm-0248320",
+   "servico": "Ferrageamento",
+   "patas": "As 4 patas",
+   "valor": 180,
+   "lancado": true,
+   "atualizado": "2026-11-11T15:20:00+00:00"
+  },
+  {
+   "id": "ferr-2026-11-11-abccmm-0249987",
+   "data": "2026-11-11",
+   "animal": "abccmm-0249987",
+   "servico": "Ferrageamento",
+   "patas": "As 4 patas",
+   "valor": 180,
+   "lancado": true,
+   "atualizado": "2026-11-11T15:20:00+00:00"
+  },
+  {
+   "id": "ferr-2026-11-11-abadon-glamar",
+   "data": "2026-11-11",
+   "animal": "abadon-glamar",
+   "servico": "Ferrageamento",
+   "patas": "As 4 patas",
+   "valor": 120,
+   "lancado": true,
+   "atualizado": "2026-11-11T15:20:00+00:00"
   }
  ]
 }
