@@ -1,7 +1,7 @@
 {
- "lote": "feno-800kg-2026-11-14",
- "titulo": "Compra de feno de hoje + lançamentos pendentes",
- "texto": "Compra de hoje (14/11): 800 kg de feno a R$ 0,50 o quilo, total R$ 400,00, pago no Pix. Soma cerca de 57 fardos de 14 kg ao estoque de feno e lança a saída. Também traz, se ainda não tiverem entrado, o ferrageamento de 11/11, o pedido de ração e o consumo real. O que você já incluiu ou mudou depois não é alterado.",
+ "lote": "nutrialfa-354755-2026-11-17",
+ "titulo": "Pedido de ração Nutrialfa #354755 + lançamentos pendentes",
+ "texto": "Pedido Nutrialfa #354755 (15/11): 15 sacos de Equestre 12% 40 kg a R$ 83,50 (R$ 1.252,50), 1 Nutrimarcha Seleção 30 kg (R$ 86,00) e 1 Inter MK 20 MS Far 40 kg (R$ 97,50). Total R$ 1.436,00, 670 kg, Pix em 18/11 (fica como a pagar até lá). Tudo fica “a caminho” e entra no estoque quando você clicar em “Chegou”. Também traz, se ainda não tiverem entrado, a compra de feno de 14/11, o ferrageamento de 11/11, o pedido de ração de 11/11 e o consumo real. O que você já incluiu ou mudou depois não é alterado.",
  "lancamentos": [
   {
    "id": "serragem-2026-11-03",
@@ -87,6 +87,18 @@
    "pagamento": "Pix",
    "situacao": "Pago",
    "atualizado": "2026-11-14T12:25:00+00:00"
+  },
+  {
+   "id": "nutrialfa-354755",
+   "tipo": "Saída",
+   "data": "2026-11-18",
+   "categoria": "Compra de alimentos",
+   "valor": 1436,
+   "descricao": "Ração Nutrialfa pedido #354755: 15 Equestre 12% 40 kg + 1 Nutrimarcha Seleção 30 kg + 1 Inter MK 20 MS 40 kg (670 kg)",
+   "pagamento": "Pix",
+   "situacao": "Pendente",
+   "obs": "Pedido em 15/11/2026, pagamento antecipado por Pix em 18/11/2026. Equestre R$ 83,50 · Nutrimarcha R$ 86,00 · Inter MK R$ 97,50. Frete não informado.",
+   "atualizado": "2026-11-17T15:30:00+00:00"
   }
  ],
  "estoque": [
@@ -132,6 +144,30 @@
    "consumoDiaFixo": 2,
    "obsDieta": "1 saco ≈ 5 refeições · meta de 60 sacos por mês (2 por dia)",
    "atualizado": "2026-11-08T13:40:00+00:00"
+  },
+  {
+   "id": "estoque-nutrimarcha-selecao-30",
+   "item": "Nutrimarcha Seleção pelet (saco 30 kg)",
+   "categoria": "Ração",
+   "unidade": "saco",
+   "quantidade": 0,
+   "dataContagem": "2026-11-17",
+   "custoUnit": 86,
+   "fornecedor": "Nutrialfa",
+   "obs": "Pedido Nutrialfa #354755 (15/11/2026).",
+   "atualizado": "2026-11-17T15:30:00+00:00"
+  },
+  {
+   "id": "estoque-inter-mk20-ms-40",
+   "item": "Inter MK 20 MS farelado (saco 40 kg)",
+   "categoria": "Ração",
+   "unidade": "saco",
+   "quantidade": 0,
+   "dataContagem": "2026-11-17",
+   "custoUnit": 97.5,
+   "fornecedor": "Nutrialfa",
+   "obs": "Pedido Nutrialfa #354755 (15/11/2026).",
+   "atualizado": "2026-11-17T15:30:00+00:00"
   }
  ],
  "cascos": [
@@ -193,6 +229,35 @@
    "data": "2026-11-14",
    "chave": "feno-2026-11-14",
    "rotulo": "Feno +57 fardos (800 kg)"
+  }
+ ],
+ "pedidos": [
+  {
+   "id": "estoque-racao-equestre-12",
+   "qtd": 600,
+   "data": "2026-11-15",
+   "obs": "15 sacos de 40 kg (Nutrialfa #354755)",
+   "valor": 1252.5,
+   "chave": "nutrialfa-354755-equestre",
+   "rotulo": "Equestre 12% 15 sacos (600 kg)"
+  },
+  {
+   "id": "estoque-nutrimarcha-selecao-30",
+   "qtd": 1,
+   "data": "2026-11-15",
+   "obs": "Nutrialfa #354755",
+   "valor": 86,
+   "chave": "nutrialfa-354755-nutrimarcha",
+   "rotulo": "Nutrimarcha Seleção 1 saco"
+  },
+  {
+   "id": "estoque-inter-mk20-ms-40",
+   "qtd": 1,
+   "data": "2026-11-15",
+   "obs": "Nutrialfa #354755",
+   "valor": 97.5,
+   "chave": "nutrialfa-354755-intermk",
+   "rotulo": "Inter MK 20 MS 1 saco"
   }
  ]
 }
