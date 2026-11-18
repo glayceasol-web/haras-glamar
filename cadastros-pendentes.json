@@ -1,7 +1,7 @@
 {
- "lote": "nutrialfa-354755-2026-11-17",
+ "lote": "nutrialfa-354755-pago-2026-11-18",
  "titulo": "Pedido de ração Nutrialfa #354755 + lançamentos pendentes",
- "texto": "Pedido Nutrialfa #354755 (15/11): 15 sacos de Equestre 12% 40 kg a R$ 83,50 (R$ 1.252,50), 1 Nutrimarcha Seleção 30 kg (R$ 86,00) e 1 Inter MK 20 MS Far 40 kg (R$ 97,50). Total R$ 1.436,00, 670 kg, Pix em 18/11 (fica como a pagar até lá). Tudo fica “a caminho” e entra no estoque quando você clicar em “Chegou”. Também traz, se ainda não tiverem entrado, a compra de feno de 14/11, o ferrageamento de 11/11, o pedido de ração de 11/11 e o consumo real. O que você já incluiu ou mudou depois não é alterado.",
+ "texto": "Pedido Nutrialfa #354755 (15/11): 15 sacos de Equestre 12% 40 kg a R$ 83,50 (R$ 1.252,50), 1 Nutrimarcha Seleção 30 kg (R$ 86,00) e 1 Inter MK 20 MS Far 40 kg (R$ 97,50). Total R$ 1.436,00, 670 kg, pago à vista no Pix em 18/11. Tudo fica “a caminho” e entra no estoque quando você clicar em “Chegou”. Também traz, se ainda não tiverem entrado, a compra de feno de 14/11, o ferrageamento de 11/11, o pedido de ração de 11/11 e o consumo real. O que você já incluiu ou mudou depois não é alterado.",
  "lancamentos": [
   {
    "id": "serragem-2026-11-03",
@@ -96,9 +96,9 @@
    "valor": 1436,
    "descricao": "Ração Nutrialfa pedido #354755: 15 Equestre 12% 40 kg + 1 Nutrimarcha Seleção 30 kg + 1 Inter MK 20 MS 40 kg (670 kg)",
    "pagamento": "Pix",
-   "situacao": "Pendente",
-   "obs": "Pedido em 15/11/2026, pagamento antecipado por Pix em 18/11/2026. Equestre R$ 83,50 · Nutrimarcha R$ 86,00 · Inter MK R$ 97,50. Frete não informado.",
-   "atualizado": "2026-11-17T15:30:00+00:00"
+   "situacao": "Pago",
+   "obs": "Pedido em 15/11/2026, pago à vista por Pix em 18/11/2026. Equestre R$ 83,50 · Nutrimarcha R$ 86,00 · Inter MK R$ 97,50. Frete não informado.",
+   "atualizado": "2026-11-18T13:45:00+00:00"
   }
  ],
  "estoque": [
