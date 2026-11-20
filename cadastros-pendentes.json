@@ -1,7 +1,7 @@
 {
- "lote": "nutrialfa-354755-pago-2026-11-18",
- "titulo": "Pedido de ração Nutrialfa #354755 + lançamentos pendentes",
- "texto": "Pedido Nutrialfa #354755 (15/11): 15 sacos de Equestre 12% 40 kg a R$ 83,50 (R$ 1.252,50), 1 Nutrimarcha Seleção 30 kg (R$ 86,00) e 1 Inter MK 20 MS Far 40 kg (R$ 97,50). Total R$ 1.436,00, 670 kg, pago à vista no Pix em 18/11. Tudo fica “a caminho” e entra no estoque quando você clicar em “Chegou”. Também traz, se ainda não tiverem entrado, a compra de feno de 14/11, o ferrageamento de 11/11, o pedido de ração de 11/11 e o consumo real. O que você já incluiu ou mudou depois não é alterado.",
+ "lote": "silo-30-sacos-2026-11-20",
+ "titulo": "Compra de silagem de hoje + lançamentos pendentes",
+ "texto": "Compra de hoje (20/11): 30 sacos de silagem a R$ 13,00, total R$ 390,00, pago. Soma 30 sacos ao saldo de silagem do dia. Pedido Nutrialfa #354755 (15/11): 15 sacos de Equestre 12% 40 kg a R$ 83,50 (R$ 1.252,50), 1 Nutrimarcha Seleção 30 kg (R$ 86,00) e 1 Inter MK 20 MS Far 40 kg (R$ 97,50). Total R$ 1.436,00, 670 kg, pago à vista no Pix em 18/11. Tudo fica “a caminho” e entra no estoque quando você clicar em “Chegou”. Também traz, se ainda não tiverem entrado, a compra de feno de 14/11, o ferrageamento de 11/11, o pedido de ração de 11/11 e o consumo real. O que você já incluiu ou mudou depois não é alterado.",
  "lancamentos": [
   {
    "id": "serragem-2026-11-03",
@@ -99,6 +99,16 @@
    "situacao": "Pago",
    "obs": "Pedido em 15/11/2026, pago à vista por Pix em 18/11/2026. Equestre R$ 83,50 · Nutrimarcha R$ 86,00 · Inter MK R$ 97,50. Frete não informado.",
    "atualizado": "2026-11-18T13:45:00+00:00"
+  },
+  {
+   "id": "silagem-2026-11-20",
+   "tipo": "Saída",
+   "data": "2026-11-20",
+   "categoria": "Compra de alimentos",
+   "valor": 390,
+   "descricao": "30 sacos de silagem (R$ 13,00 cada)",
+   "situacao": "Pago",
+   "atualizado": "2026-11-20T20:05:00+00:00"
   }
  ],
  "estoque": [
@@ -229,6 +239,13 @@
    "data": "2026-11-14",
    "chave": "feno-2026-11-14",
    "rotulo": "Feno +57 fardos (800 kg)"
+  },
+  {
+   "id": "estoque-silagem",
+   "qtd": 30,
+   "data": "2026-11-20",
+   "chave": "silagem-2026-11-20",
+   "rotulo": "Silagem +30 sacos"
   }
  ],
  "pedidos": [
